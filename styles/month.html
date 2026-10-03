@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Итоги месяца — варианты</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="../style.css?v=44">
+<style>
+  .wrap { max-width:760px; margin:0 auto; padding:20px 16px 60px; display:grid; gap:14px; }
+  .intro h1 { font-size:28px; font-weight:700; letter-spacing:-.02em; margin:4px 0 6px; }
+  .intro p { margin:0; color:var(--soft); font-size:15px; }
+  .intro .seg { margin-top:12px; }
+  .part { margin:22px 2px 0; font-size:13px; font-weight:600; color:var(--faint); text-transform:uppercase; letter-spacing:.06em; }
+  .opt { display:flex; align-items:baseline; gap:10px; margin:0 2px -4px; }
+  .opt .n { flex:none; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--card); font-weight:700; font-size:14px; transform:translateY(6px); }
+  .opt h2 { font-size:18px; font-weight:600; }
+  .opt p { margin:2px 0 0; font-size:13.5px; color:var(--faint); }
+  .ax { font-family:Onest,sans-serif; font-size:10.5px; fill:var(--faint); }
+  .grid { stroke:var(--line); stroke-width:1; }
+  svg { display:block; max-width:100%; height:auto; overflow:visible; }
+
+  /* A — как сейчас */
+  .sa .m-lede { margin:0 0 14px; font-size:15px; color:var(--soft); }
+  .tiles small { font-size:11.5px; color:var(--faint); margin-top:3px; line-height:1.3; }
+
+  /* B — журнал */
+  .sb { padding:24px 20px; }
+  .sb .kick { font-size:12.5px; font-weight:600; color:var(--teal); text-transform:uppercase; letter-spacing:.08em; }
+  .sb h3 { font-family:"PT Serif",Georgia,serif; font-size:44px; font-weight:700; letter-spacing:-.01em; margin:4px 0 10px; }
+  .sb .lead { font-family:"PT Serif",Georgia,serif; font-size:19px; line-height:1.5; margin:0 0 20px; color:var(--ink); text-wrap:pretty; }
+  .sb .lead b { font-family:Onest,sans-serif; font-weight:600; background:var(--teal-bg); border-radius:6px; padding:0 5px; white-space:nowrap; }
+  .sb .hero { display:flex; align-items:flex-end; gap:14px; padding:16px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .sb .hero b { font-size:64px; line-height:.9; font-weight:700; letter-spacing:-.04em; }
+  .sb .hero span { font-size:15px; color:var(--soft); padding-bottom:4px; }
+  .sb .hero small { display:block; font-size:12.5px; color:var(--faint); }
+  .sb .spark { margin:14px 0 4px; }
+  .sb dl { display:grid; grid-template-columns:1fr 1fr; margin:8px 0 0; }
+  .sb dl div { padding:12px 0; border-bottom:1px solid var(--line); }
+  .sb dl div:nth-child(odd) { padding-right:12px; border-right:1px solid var(--line); }
+  .sb dl div:nth-child(even) { padding-left:14px; }
+  .sb dt { font-size:12.5px; color:var(--faint); }
+  .sb dd { margin:0; font-size:22px; font-weight:700; letter-spacing:-.01em; }
+  .sb dd small { font-size:12px; font-weight:400; color:var(--faint); margin-left:4px; }
+
+  /* C — кольца */
+  .sc .ring-wrap { max-width:340px; margin:0 auto; }
+  .sc .rs { fill:var(--s0); }
+  .sc .r1 { fill:var(--s1); } .sc .r2 { fill:var(--s2); } .sc .r3 { fill:var(--s3); } .sc .r4 { fill:var(--s4); }
+  .sc .rlab { font-family:Onest,sans-serif; font-size:10px; fill:var(--soft); }
+  .sc .c1 { font-family:Onest,sans-serif; font-size:13px; fill:var(--faint); }
+  .sc .c2 { font-family:Onest,sans-serif; font-size:30px; font-weight:700; fill:var(--ink); }
+  .sc .tiles { margin-top:14px; }
+
+  /* D — открытка */
+  .sd { position:relative; overflow:hidden; color:#F6EDE3; padding:22px 20px 20px;
+    background:linear-gradient(170deg, #1B2540 0%, #3B3556 42%, #B8674A 82%, #E8A15F 100%); }
+  .sd .kick { font-size:12.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#F0C9A4; }
+  .sd h3 { font-family:"PT Serif",Georgia,serif; font-size:40px; margin:4px 0 2px; }
+  .sd .sub { font-size:14px; color:#E9D7C6; margin:0; }
+  .sd .big { display:grid; grid-template-columns:1fr 1fr; gap:18px 14px; margin:24px 0 18px; position:relative; z-index:1; }
+  .sd .big b { display:block; font-size:38px; font-weight:700; line-height:1; letter-spacing:-.03em; color:#FFF8F0; }
+  .sd .big span { font-size:13px; color:#F2DFCD; }
+  .sd .pc-verse { font-family:"PT Serif",Georgia,serif; font-style:italic; font-size:15px; line-height:1.45; margin:0; max-width:30ch; position:relative; z-index:1; color:#FFF3E6; }
+  .sd .pc-verse small { display:block; font-style:normal; font-family:Onest,sans-serif; font-size:12px; color:#F0C9A4; margin-top:4px; }
+  .sd svg.boat { position:absolute; right:-10px; bottom:-6px; width:170px; opacity:.9; }
+  .sd .pc-save { margin-top:18px; position:relative; z-index:1; border:0; border-radius:12px; padding:8px 14px; font-weight:600; font-size:13.5px; background:#FFF3E6; color:#2A2235; }
+
+  /* 1 — календарь */
+  .cal { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:4px; }
+  .cal .h { font-size:11.5px; color:var(--faint); text-align:center; padding-bottom:2px; }
+  .cal .d { background:var(--field); border-radius:10px; padding:4px 4px 5px; min-height:52px; display:flex; flex-direction:column; gap:2px; }
+  .cal .d.e { background:transparent; }
+  .cal .d .num { font-size:11px; color:var(--soft); line-height:1.1; }
+  .cal .ic { display:grid; grid-template-columns:1fr 1fr; gap:1px 2px; justify-items:center; margin-top:auto; }
+  .cal .ic svg { width:13px; height:13px; }
+  .cal .ic .off { opacity:0; }
+  .ileg { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:12px; font-size:12.5px; color:var(--soft); }
+  .ileg span { display:inline-flex; align-items:center; gap:5px; }
+  .ileg svg { width:14px; height:14px; }
+  .ico { fill:none; stroke:var(--teal); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .ico.f { fill:var(--teal); stroke:none; }
+
+  /* 2 — утро и день */
+  .vs li { list-style:none; padding:10px 0; display:grid; gap:6px; }
+  .vs { margin:0; padding:0; }
+  .vs .t { display:flex; justify-content:space-between; gap:12px; font-size:14.5px; }
+  .vs .t span:last-child { font-weight:600; }
+  .vs .bar { height:14px; border-radius:0 4px 4px 0; background:var(--teal); }
+  .vs .bar.g { background:var(--line2); }
+  .vs .track { background:transparent; }
+
+  /* 3 — сферы по неделям */
+  .sm { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px 18px; }
+  .sm h4 { margin:0 0 4px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; gap:6px; }
+  .sm h4 small { font-weight:400; color:var(--faint); font-size:12px; }
+  .sm .b { fill:var(--teal); } .sm .b.lo { fill:var(--s2); }
+  .sm .nl { stroke:var(--ink); stroke-width:2; stroke-linecap:round; }
+
+  /* 4 — ритм сна */
+  .band { fill:var(--k3); opacity:.14; }
+  .ln { fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+  .ln.bed { stroke:var(--k4); } .ln.wk { stroke:var(--k3); }
+  .endl { font-family:Onest,sans-serif; font-size:11.5px; fill:var(--ink); font-weight:600; }
+  .endd { stroke:var(--card); stroke-width:2; }
+
+  /* 5 — вафля */
+  .waf { display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:3px; }
+  .waf i { aspect-ratio:1; border-radius:3px; background:var(--s0); }
+  .waf i.on { background:var(--teal); }
+  .wleg { display:flex; gap:16px; flex-wrap:wrap; margin-top:10px; font-size:12.5px; color:var(--soft); }
+  .wleg i { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+
+  /* 6 — дни недели */
+  .wd { display:grid; grid-template-columns:auto repeat(7, minmax(0,1fr)); gap:3px; align-items:center; }
+  .wd .rl { font-size:13px; color:var(--soft); padding-right:8px; white-space:nowrap; }
+  .wd .ch { font-size:11.5px; color:var(--faint); text-align:center; }
+  .wd .c { height:34px; border-radius:6px; display:grid; place-items:center; font-size:11.5px; font-weight:600; }
+  .wd .l0 { background:var(--s0); color:var(--soft); } .wd .l1 { background:var(--s1); color:var(--ink); }
+  .wd .l2 { background:var(--s2); color:var(--ink); } .wd .l3 { background:var(--s3); color:var(--ink); } .wd .l4 { background:var(--s4); color:var(--on-accent); }
+  .wd .ch.ch-c { color:var(--violet); }
+
+  .foot { font-size:13.5px; color:var(--faint); margin:8px 2px 0; }
+  @media (min-width:700px) { .sm { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+</style>
+<script>try { const t = localStorage.getItem("habits.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}</script>
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <h1>Итоги месяца — варианты</h1>
+    <p>Данные вымышленные: полный сентябрь, ребёнок Тёма. Выбери стиль экрана (A–D) и номера графиков (1–6), которые хочешь видеть. Нажми на клетку или точку — появится подсказка.</p>
+    <div class="seg" role="tablist" aria-label="Тема" id="theme">
+      <button type="button" data-t="auto">Авто</button><button type="button" data-t="light">Светлая</button><button type="button" data-t="dark">Тёмная</button>
+    </div>
+  </header>
+
+  <div class="part">Стиль экрана</div>
+
+  <div class="opt"><span class="n">A</span><div><h2>Как сейчас</h2><p>Плитки с цифрами. Для сравнения.</p></div></div>
+  <section class="card sa">
+    <p class="m-lede" id="a-lede"></p>
+    <div class="tiles" id="a-tiles"></div>
+  </section>
+
+  <div class="opt"><span class="n">B</span><div><h2>Журнал</h2><p>Месяц рассказан словами, одна главная цифра, тонкие линии вместо плашек.</p></div></div>
+  <section class="card sb">
+    <div class="kick">Итоги месяца</div>
+    <h3>Сентябрь</h3>
+    <p class="lead" id="b-lead"></p>
+    <div class="hero" id="b-hero"></div>
+    <div class="spark" id="b-spark"></div>
+    <dl id="b-dl"></dl>
+  </section>
+
+  <div class="opt"><span class="n">C</span><div><h2>Кольца</h2><p>Весь месяц на одном круге: каждое кольцо — одна дорожка, каждый сектор — день. Чем темнее, тем полнее день.</p></div></div>
+  <section class="card sc">
+    <div class="ring-wrap" id="c-ring"></div>
+    <div class="tiles" id="c-tiles"></div>
+  </section>
+
+  <div class="opt"><span class="n">D</span><div><h2>Открытка</h2><p>Карточка в цветах иконки Keel. Можно сохранить картинкой и отправить жене. Под ней — обычные графики.</p></div></div>
+  <section class="card sd">
+    <div class="kick">Наш сентябрь</div>
+    <h3>Сентябрь</h3>
+    <p class="sub">30 дней нашей семьи</p>
+    <div class="big" id="d-big"></div>
+    <p class="pc-verse">«Если Господь не созиждет дома, напрасно трудятся строящие его»<small>Псалом 126:1</small></p>
+    <button type="button" class="pc-save" title="В рабочей версии">Сохранить картинкой</button>
+    <svg class="boat" viewBox="0 0 200 170" aria-hidden="true">
+      <path d="M0 120 q25 -8 50 0 t50 0 t50 0 t50 0 V170 H0Z" fill="#1B2540" opacity=".55"/>
+      <path d="M100 118 L95 162 H105 Z" fill="#1B2540" opacity=".7"/>
+      <path d="M40 104 H160 L146 122 H54 Z" fill="#1B2540"/>
+      <line x1="100" y1="104" x2="100" y2="22" stroke="#1B2540" stroke-width="3"/>
+      <path d="M104 26 V98 H150 Z" fill="#FFF3E6" opacity=".92"/><path d="M96 34 V98 H62 Z" fill="#F0C9A4" opacity=".85"/>
+      <path d="M0 132 q25 -8 50 0 t50 0 t50 0 t50 0 V170 H0Z" fill="#2A2F4A" opacity=".8"/>
+    </svg>
+  </section>
+
+  <div class="part">Новые графики</div>
+
+  <div class="opt"><span class="n">1</span><div><h2>Календарь месяца</h2><p>Обычный календарь, в клетке — значки того, что было в этот день. Читается легче полосок.</p></div></div>
+  <section class="card">
+    <div class="cal" id="g1"></div>
+    <div class="ileg" id="g1-leg"></div>
+  </section>
+
+  <div class="opt"><span class="n">2</span><div><h2>Утро и день</h2><p>Как проходит день после утренней молитвы и без неё — по главным делам.</p></div></div>
+  <section class="card">
+    <ul class="vs" id="g2"></ul>
+    <p class="note">Это совпадение, а не доказательство: в дни без молитвы бывает и тяжёлая ночь. Но если разница держится месяцами, это повод.</p>
+  </section>
+
+  <div class="opt"><span class="n">3</span><div><h2>Сферы по неделям</h2><p>Каждая сфера — свой маленький график: дни по неделям и черта нормы. Видно, в какую неделю сфера проседала.</p></div></div>
+  <section class="card">
+    <div class="sm" id="g3"></div>
+  </section>
+
+  <div class="opt"><span class="n">4</span><div><h2>Ритм сна</h2><p>Две линии: когда ребёнок засыпал и когда вставал. Полоса между ними — ночь. Видно, сдвигается ли режим.</p></div></div>
+  <section class="card">
+    <div id="g4"></div>
+  </section>
+
+  <div class="opt"><span class="n">5</span><div><h2>Свободное время</h2><p>Каждый квадрат — 15 минут свободного слота. Закрашено — ушло на шаг к цели.</p></div></div>
+  <section class="card">
+    <div class="card-h"><h2 id="g5-h"></h2><small id="g5-s"></small></div>
+    <div class="waf" id="g5"></div>
+    <div class="wleg"><span><i style="background:var(--teal)"></i>шаг к цели</span><span><i style="background:var(--s0)"></i>слот без шага</span></div>
+  </section>
+
+  <div class="opt"><span class="n">6</span><div><h2>Дни недели</h2><p>В какие дни что получается. Фиолетовым — дни служения.</p></div></div>
+  <section class="card">
+    <div class="wd" id="g6"></div>
+  </section>
+
+  <p class="foot">Напиши, например: «стиль B, графики 1, 3 и 4». Можно смешивать — скажем, журнал сверху и открытку в конце для жены.</p>
+</div>
+<div class="tip" id="tip" hidden></div>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2, "0");
+const hm = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${Math.floor(m / 60)}:${pad(m % 60)}`; };
+const fmtDur = m => { m = Math.round(m); const h = Math.floor(m / 60); return h ? `${h} ч${m % 60 ? ` ${m % 60} мин` : ""}` : `${m} мин`; };
+const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? b : c; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const DOW = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"], CHURCH = [0, 1, 3], SLOT = { 2: 90, 4: 90, 5: 90 };
+const fmtD = new Intl.DateTimeFormat("ru-RU", { weekday: "short", day: "numeric", month: "short" });
+
+// Вымышленный сентябрь 2026: детерминированный «случай»
+let seed = 11; const r = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+const N = 30, days = [];
+for (let i = 0; i < N; i++) {
+  const d = new Date(2026, 8, i + 1), dw = (d.getDay() + 6) % 7;
+  const pray = r() < (dw === 6 ? .55 : .8) ? 10 + Math.round(r() * 14) : 0;
+  const fAll = 3; let fDone = 0; for (let j = 0; j < fAll; j++) if (r() < (pray ? .72 : .42)) fDone++;
+  const together = r() < ([2, 4, 5, 6].includes(dw) ? .38 : .06);
+  const ritual = r() < (CHURCH.includes(dw) ? .6 : .82);
+  const slot = SLOT[dw] ? { len: SLOT[dw], done: r() < .64, min: 0 } : null;
+  if (slot?.done) slot.min = 45 + Math.round(r() * 3) * 15;
+  const bed = 1290 + Math.round(r() * 60) - Math.round(i * 1.1), wake = 405 + Math.round(r() * 75) + 1440;
+  const wakes = Array.from({ length: Math.floor(r() * (i < 15 ? 3.4 : 2.4)) }, () => Math.round(bed + 60 + r() * (wake - bed - 90))).sort((a, b) => a - b);
+  const sp = new Set();
+  if (together || r() < .5) sp.add("Жена");
+  if (r() < .72) sp.add("Ребёнок");
+  if (CHURCH.includes(dw) || pray) sp.add("Церковь");
+  if (slot?.done || r() < .12) sp.add("Рост");
+  if (r() < (i > 20 ? .05 : .22)) sp.add("Деньги");
+  if (r() < .08) sp.add("Родные");
+  days.push({ d, i, dw, pray, fAll, fDone, together, ritual, slot, bed, wake, wakes, sp });
+}
+const sum = f => days.reduce((a, x) => a + f(x), 0);
+const S = {
+  prayDays: sum(x => !!x.pray), prayMin: sum(x => x.pray), together: sum(x => x.together), ritual: sum(x => x.ritual),
+  fDone: sum(x => x.fDone), fAll: sum(x => x.fAll), slotMin: sum(x => x.slot?.min || 0), slotLen: sum(x => x.slot?.len || 0),
+  night: sum(x => x.wake - x.bed) / N, wakes: sum(x => x.wakes.length) / N, reviews: 4,
+};
+const lvlOf = v => v <= 0 ? 0 : v >= 1 ? 4 : v > .66 ? 3 : v > .33 ? 2 : 1;
+const TRACKS = [
+  ["Молитва", x => lvlOf(x.pray / 15), x => x.pray ? fmtDur(x.pray) : "без молитвы"],
+  ["Главное", x => lvlOf(x.fDone / x.fAll), x => `главное ${x.fDone} из ${x.fAll}`],
+  ["Итоги", x => x.ritual ? 4 : 0, x => x.ritual ? "вечерние 5 минут" : "без итогов"],
+  ["Вдвоём", x => x.together ? 4 : 0, x => x.together ? "вдвоём" : "не вдвоём"],
+];
+
+/* ---------- A ---------- */
+const tile = (v, l, c = "") => `<div><b>${v}</b><span>${l}</span>${c ? `<small>${c}</small>` : ""}</div>`;
+$("#a-lede").textContent = `Весь месяц, 30 дней. Молитва — ${S.prayDays} утра из 30, вдвоём — ${S.together} раз, Тёма спал ночью в среднем ${fmtDur(S.night)}.`;
+$("#a-tiles").innerHTML = tile(`${S.prayDays} из 30`, "утр с молитвой", "в августе: 17 из 31") + tile(String(S.together), "вечеров вдвоём", "в августе: 4")
+  + tile(`${S.fDone} из ${S.fAll}`, "главных дел сделано", "в августе: 41 из 78") + tile(fmtDur(S.night), "ночь Тёмы", "в августе: 9 ч 10 мин");
+
+/* ---------- B ---------- */
+$("#b-lead").innerHTML = `Ты молился <b>${S.prayDays} утра</b> из тридцати, провёл с женой <b>${S.together} ${plural(S.together, "вечер", "вечера", "вечеров")}</b> и закрыл <b>${S.fDone} главных дел</b>. Тёма спал в среднем <b>${fmtDur(S.night)}</b> — на полчаса дольше, чем в августе.`;
+$("#b-hero").innerHTML = `<b>${S.prayDays}</b><span>утра с молитвой<small>в августе — 17 из 31</small></span>`;
+{
+  const W = 340, H = 44, bw = W / N;
+  let s = `<svg viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="Молитва по дням месяца">`;
+  days.forEach(x => {
+    const h = x.pray ? Math.max(4, x.pray / 25 * H) : 2;
+    s += `<rect x="${x.i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" rx="2" fill="${x.pray ? "var(--teal)" : "var(--line2)"}" data-tip="${esc(`${fmtD.format(x.d)} · ${x.pray ? fmtDur(x.pray) : "без молитвы"}`)}"/>`;
+  });
+  s += `<text x="0" y="${H + 12}" class="ax">1 сент.</text><text x="${W}" y="${H + 12}" class="ax" text-anchor="end">30 сент.</text></svg>`;
+  $("#b-spark").innerHTML = s;
+}
+const dd = (l, v, c) => `<div><dt>${l}</dt><dd>${v}${c ? `<small>${c}</small>` : ""}</dd></div>`;
+$("#b-dl").innerHTML = dd("в молитве", fmtDur(S.prayMin)) + dd("вечерних итогов", S.ritual, "из 30") + dd("на цели в слотах", fmtDur(S.slotMin)) + dd("обзоров недели", S.reviews, "из 4");
+
+/* ---------- C ---------- */
+{
+  const C = 170, R0 = 64, RW = 20, gapA = .012;
+  const arc = (r1, r2, a1, a2) => {
+    const p = (r, a) => `${(C + r * Math.sin(a)).toFixed(2)},${(C - r * Math.cos(a)).toFixed(2)}`;
+    return `M${p(r2, a1)}A${r2},${r2} 0 0 1 ${p(r2, a2)}L${p(r1, a2)}A${r1},${r1} 0 0 0 ${p(r1, a1)}Z`;
+  };
+  // Начало круга — сверху; первые 0,35 рад оставлены под подписи колец
+  const lead = .72, step = (2 * Math.PI - lead) / N;
+  let s = `<svg viewBox="0 0 ${C * 2} ${C * 2}" role="img" aria-label="Месяц кольцами: молитва, главное, итоги, вдвоём">`;
+  TRACKS.forEach(([name, lv, tipF], ti) => {
+    const r2 = R0 + RW * (TRACKS.length - ti), r1 = r2 - RW + 3;
+    days.forEach(x => {
+      const a1 = lead + x.i * step + gapA, a2 = lead + (x.i + 1) * step - gapA, l = lv(x);
+      s += `<path d="${arc(r1, r2, a1, a2)}" class="${l ? "r" + l : "rs"}" data-tip="${esc(`${fmtD.format(x.d)} · ${tipF(x)}`)}"/>`;
+    });
+    s += `<text x="${C + 5}" y="${C - r2 + RW / 2 + 1.5}" class="rlab">${name}</text>`;
+  });
+  [1, 8, 15, 22, 29].forEach(n => {
+    const a = lead + (n - .5) * step, rr = R0 + RW * TRACKS.length + 12;
+    s += `<text x="${C + rr * Math.sin(a)}" y="${C - rr * Math.cos(a) + 3.5}" text-anchor="middle" class="ax">${n}</text>`;
+  });
+  s += `<text x="${C}" y="${C - 8}" text-anchor="middle" class="c1">Сентябрь</text><text x="${C}" y="${C + 24}" text-anchor="middle" class="c2">${S.prayDays}/30</text>`;
+  s += `<text x="${C}" y="${C + 40}" text-anchor="middle" class="c1" style="font-size:11px">утр с молитвой</text></svg>`;
+  $("#c-ring").innerHTML = s;
+  $("#c-tiles").innerHTML = tile(String(S.together), "вечеров вдвоём") + tile(`${S.ritual} из 30`, "вечерних итогов");
+}
+
+/* ---------- D ---------- */
+const big = (v, l) => `<div><b>${v}</b><span>${l}</span></div>`;
+$("#d-big").innerHTML = big(S.prayDays, "утр с молитвой") + big(S.together, "вечеров вдвоём") + big(`${(S.night / 60).toFixed(1).replace(".", ",")} ч`, "ночь Тёмы в среднем") + big(S.fDone, "главных дел");
+
+/* ---------- 1 — календарь ---------- */
+const ICON = {
+  pray: '<path class="ico" d="M12 3c2.5 3 4 5 4 7.5a4 4 0 0 1-8 0C8 8 9.5 6 12 3z"/><path class="ico" d="M7 21h10"/>',
+  heart: '<path class="ico f" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  moon: '<path class="ico" d="M15.5 4a8.5 8.5 0 1 0 4.8 12.4A7 7 0 0 1 15.5 4z"/>',
+  flag: '<path class="ico" d="M6 21V4M6 4h11l-2.5 4L17 12H6"/>',
+};
+const ic = (k, on) => `<svg viewBox="0 0 24 24" class="${on ? "" : "off"}" aria-hidden="true">${ICON[k]}</svg>`;
+{
+  let s = DOW.map(d => `<div class="h">${d}</div>`).join("") + `<div class="d e"></div>`.repeat(days[0].dw);
+  days.forEach(x => {
+    const what = [x.pray && "молитва " + fmtDur(x.pray), x.together && "вдвоём", x.ritual && "вечерние итоги", x.slot?.done && "шаг к цели"].filter(Boolean);
+    s += `<div class="d" data-tip="${esc(`${fmtD.format(x.d)} · ${what.join(", ") || "ничего не отмечено"}`)}"><span class="num">${x.i + 1}</span>
+      <span class="ic">${ic("pray", x.pray)}${ic("heart", x.together)}${ic("moon", x.ritual)}${ic("flag", x.slot?.done)}</span></div>`;
+  });
+  $("#g1").innerHTML = s;
+  const L = (k, t) => `<span><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${t}</span>`;
+  $("#g1-leg").innerHTML = L("pray", "молитва утром") + L("heart", "вдвоём") + L("moon", "вечерние 5 минут") + L("flag", "шаг к цели");
+}
+
+/* ---------- 2 — утро и день ---------- */
+{
+  const w = days.filter(x => x.pray), wo = days.filter(x => !x.pray);
+  const rate = a => a.reduce((s, x) => s + x.fDone, 0) / a.reduce((s, x) => s + x.fAll, 0);
+  const rw = rate(w), rwo = rate(wo);
+  const row = (t, n, v, g) => `<li><div class="t"><span>${t} <small style="color:var(--faint)">· ${n} ${plural(n, "день", "дня", "дней")}</small></span><span>${Math.round(v * 100)}%</span></div>
+    <div class="track"><div class="bar ${g ? "g" : ""}" style="width:${v * 100}%"></div></div></li>`;
+  $("#g2").innerHTML = row("После утренней молитвы", w.length, rw) + row("Без молитвы", wo.length, rwo, true)
+    + `<li style="padding-top:4px"><div class="t"><span style="color:var(--soft)">В дни с молитвой главных дел закрыто в ${(rw / rwo).toFixed(1).replace(".", ",")} раза больше</span><span></span></div></li>`;
+}
+
+/* ---------- 3 — сферы по неделям ---------- */
+{
+  const NORM = { "Жена": 5, "Ребёнок": 6, "Церковь": 3, "Рост": 3, "Деньги": 1, "Родные": 0 };
+  const weeks = []; let cur = null;
+  days.forEach(x => { if (!cur || x.dw === 0) weeks.push(cur = []); cur.push(x); });
+  const W = 150, H = 70, pb = 14;
+  $("#g3").innerHTML = Object.entries(NORM).filter(([, n]) => n).map(([s, n]) => {
+    const tot = sum(x => x.sp.has(s)), exp = Math.round(n * N / 7), bw = W / weeks.length;
+    let g = `<svg viewBox="0 0 ${W} ${H + pb}" role="img" aria-label="${s} по неделям">`;
+    g += `<line x1="0" x2="${W}" y1="${H}" y2="${H}" class="grid"/>`;
+    weeks.forEach((wk, i) => {
+      const c = wk.filter(x => x.sp.has(s)).length, need = n * wk.length / 7, h = c / 7 * H, x0 = i * bw + bw * .2, w0 = bw * .6;
+      if (c) g += `<path d="M${x0},${H}V${H - h + 3}Q${x0},${H - h} ${x0 + 3},${H - h}H${x0 + w0 - 3}Q${x0 + w0},${H - h} ${x0 + w0},${H - h + 3}V${H}Z" class="b ${c < need * .6 ? "lo" : ""}"/>`;
+      g += `<line x1="${x0 - 3}" x2="${x0 + w0 + 3}" y1="${H - need / 7 * H}" y2="${H - need / 7 * H}" class="nl"/>`;
+      g += `<rect x="${i * bw}" y="0" width="${bw}" height="${H}" fill="transparent" data-tip="${esc(`${wk[0].i + 1}–${wk[wk.length - 1].i + 1} сент. · ${c} из ${wk.length} дн., норма ≈ ${Math.round(need)}`)}"/>`;
+      g += `<text x="${x0 + w0 / 2}" y="${H + 11}" text-anchor="middle" class="ax">${wk[0].i + 1}</text>`;
+    });
+    return `<div><h4>${s}<small>${tot} из ≈${exp}</small></h4>${g}</svg></div>`;
+  }).join("");
+}
+
+/* ---------- 4 — ритм сна ---------- */
+{
+  const el = $("#g4"), W = Math.max(300, el.clientWidth || 340), H = 210, pl = 40, pr = 70, pt = 10, pb = 22;
+  const lo = 20 * 60 + 60, hi = 33 * 60, iw = W - pl - pr, ih = H - pt - pb;
+  const X = i => pl + i / (N - 1) * iw, Y = v => pt + (v - lo) / (hi - lo) * ih;
+  // Скользящее среднее по 5 дням — чтобы был виден режим, а не шум одной ночи
+  const smooth = key => days.map((x, i) => { const w = days.slice(Math.max(0, i - 2), i + 3); return w.reduce((a, y) => a + y[key], 0) / w.length; });
+  const b = smooth("bed"), w = smooth("wake");
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" role="img" aria-label="Ритм сна: отбой и подъём по дням">`;
+  for (let v = 21 * 60; v <= hi; v += 120) s += `<line x1="${pl}" x2="${pl + iw}" y1="${Y(v)}" y2="${Y(v)}" class="grid"/><text x="${pl - 6}" y="${Y(v) + 3.5}" class="ax" text-anchor="end">${hm(v)}</text>`;
+  s += `<path class="band" d="M${b.map((v, i) => `${X(i)},${Y(v)}`).join("L")}L${w.map((v, i) => `${X(i)},${Y(v)}`).reverse().join("L")}Z"/>`;
+  s += `<path class="ln bed" d="M${b.map((v, i) => `${X(i)},${Y(v)}`).join("L")}"/><path class="ln wk" d="M${w.map((v, i) => `${X(i)},${Y(v)}`).join("L")}"/>`;
+  s += `<circle cx="${X(N - 1)}" cy="${Y(b[N - 1])}" r="4" fill="var(--k4)" class="endd"/><circle cx="${X(N - 1)}" cy="${Y(w[N - 1])}" r="4" fill="var(--k3)" class="endd"/>`;
+  s += `<text x="${X(N - 1) + 9}" y="${Y(b[N - 1]) + 4}" class="endl">отбой ${hm(b[N - 1])}</text><text x="${X(N - 1) + 9}" y="${Y(w[N - 1]) + 4}" class="endl">подъём ${hm(w[N - 1])}</text>`;
+  [0, 7, 14, 21, 29].forEach(i => { s += `<text x="${X(i)}" y="${H - 6}" class="ax" text-anchor="middle">${i + 1}</text>`; });
+  days.forEach((x, i) => { s += `<rect x="${X(i) - iw / N / 2}" y="${pt}" width="${iw / N}" height="${ih}" fill="transparent" data-tip="${esc(`${fmtD.format(x.d)} · ${hm(x.bed)}–${hm(x.wake)}, ${fmtDur(x.wake - x.bed)}`)}"/>`; });
+  el.innerHTML = s + `</svg><p class="note">Линии сглажены по пяти дням: видно, как сдвигается режим, а не одну тяжёлую ночь. Отбой за месяц стал раньше на ${Math.round(b[0] - b[N - 1])} мин.</p>`;
+}
+
+/* ---------- 5 — вафля ---------- */
+{
+  const total = S.slotLen / 15, on = Math.round(S.slotMin / 15);
+  $("#g5").innerHTML = Array.from({ length: total }, (_, i) => `<i class="${i < on ? "on" : ""}"></i>`).join("");
+  $("#g5-h").textContent = `${fmtDur(S.slotMin)} из ${fmtDur(S.slotLen)}`;
+  $("#g5-s").textContent = `${Math.round(S.slotMin / S.slotLen * 100)}% свободного времени — на цели`;
+}
+
+/* ---------- 6 — дни недели ---------- */
+{
+  const rows = [
+    ["Молитва", x => !!x.pray],
+    ["Главное", x => x.fDone / x.fAll],
+    ["Итоги", x => x.ritual],
+    ["Вдвоём", x => x.together],
+  ];
+  let s = `<span></span>` + DOW.map((d, i) => `<span class="ch ${CHURCH.includes(i) ? "ch-c" : ""}">${d}</span>`).join("");
+  rows.forEach(([name, f]) => {
+    s += `<span class="rl">${name}</span>`;
+    for (let i = 0; i < 7; i++) {
+      const ds = days.filter(x => x.dw === i), v = ds.reduce((a, x) => a + +f(x), 0) / ds.length;
+      s += `<span class="c l${lvlOf(v * 1.15)}" data-tip="${esc(`${name} · ${DOW[i]}: ${Math.round(v * 100)}% (${ds.length} ${plural(ds.length, "день", "дня", "дней")})`)}">${Math.round(v * 100)}</span>`;
+    }
+  });
+  $("#g6").innerHTML = s;
+}
+
+/* ---------- тема и подсказки ---------- */
+function theme(t) {
+  if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  document.querySelectorAll("#theme button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.t === t)));
+}
+theme(document.documentElement.dataset.theme || "auto");
+document.querySelectorAll("#theme button").forEach(b => b.addEventListener("click", () => theme(b.dataset.t)));
+const tip = $("#tip");
+document.addEventListener("pointerover", e => {
+  const el = e.target.closest?.("[data-tip]");
+  if (!el) { tip.hidden = true; return; }
+  tip.textContent = el.getAttribute("data-tip"); tip.hidden = false;
+  const rc = el.getBoundingClientRect(), w = tip.offsetWidth;
+  tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, rc.left + rc.width / 2 - w / 2)) + "px";
+  tip.style.top = Math.max(8, rc.top - tip.offsetHeight - 6) + "px";
+});
+addEventListener("scroll", () => { tip.hidden = true; }, { passive: true });
+</script>
+</body>
+</html>

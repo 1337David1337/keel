@@ -692,6 +692,7 @@ function render() {
   renderToday(); renderPlan(); renderKid(); renderTogether(); renderWeek(); renderGoals();
   renderProgress(); renderSystem(); renderManage(); renderSettingsPanel();
   renderRitualCard(); renderSlotCard(); renderFocus(); renderBalance(); renderSlotPlan(); renderFocusTime();
+  renderMonth();
   renderPrayCard(); renderDuoCard(); renderVerse(); renderPrayStats(); renderPraySettings(); renderNeeds(); renderRemind();
 }
 function renderHeader() {
@@ -1401,16 +1402,16 @@ const ICONS = {
   results: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 19V11M10 19V6M15 19v-9M20 19v-5"/></svg>',
 };
 const VIEWS = [["today", "Сегодня"], ["plan", "План"], ["prayer", "Молитва"], ["sleep", "Сон"], ["results", "Итоги"]];
-const VIEW_TITLES = { plan: "План", prayer: "Молитва", sleep: "Сон", results: "Итоги", settings: "Настройки" };
+const VIEW_TITLES = { plan: "План", prayer: "Молитва", sleep: "Сон", results: "Итоги", month: "Итоги месяца", settings: "Настройки" };
 // старые адреса вкладок из закладок
 const VIEW_ALIASES = { morning: "sleep", goals: "plan" };
 function currentView() {
   const h = location.hash.slice(1), v = VIEW_ALIASES[h] || h;
-  return v === "settings" || VIEWS.some(x => x[0] === v) ? v : "today";
+  return v === "settings" || v === "month" || VIEWS.some(x => x[0] === v) ? v : "today";
 }
 function renderNav() {
-  const v = currentView();
-  const html = VIEWS.map(([id, title]) => `<a href="#${id}"${id === v ? ' aria-current="page"' : ""}>${ICONS[id]}<span>${title}</span></a>`).join("");
+  const v = currentView(), nv = v === "month" ? "results" : v;
+  const html = VIEWS.map(([id, title]) => `<a href="#${id}"${id === nv ? ' aria-current="page"' : ""}>${ICONS[id]}<span>${title}</span></a>`).join("");
   document.querySelectorAll("[data-nav]").forEach(n => { n.innerHTML = html; });
   $(".gear").classList.toggle("on", v === "settings");
 }
@@ -1781,6 +1782,9 @@ const shiftPeriod = dlt => {
   renderProgress();
 };
 $("#per-prev").addEventListener("click", () => shiftPeriod(-1));
+$("#m-prev").addEventListener("click", () => { MV.off--; MV.all = false; renderMonth(); });
+$("#m-next").addEventListener("click", () => { MV.off = Math.min(0, MV.off + 1); MV.all = false; renderMonth(); });
+$("#m-mom-all").addEventListener("click", () => { MV.all = !MV.all; renderMonth(); });
 $("#per-next").addEventListener("click", () => shiftPeriod(1));
 $("#per-now").addEventListener("click", () => { if (S.view === "month") S.monthOffset = 0; else S.quarterOffset = 0; renderProgress(); });
 $("#sync").addEventListener("click", () => { if (!S.cfg) { openConnect(); return; } S.pending.length ? flush() : refresh(); });
@@ -2526,6 +2530,204 @@ function renderFocusTime() {
     <div class="hb"><i style="width:${min / max * 100}%"></i></div></li>`).join("") : `<li class="empty">Пока нет сделанных слотов в этом месяце.</li>`;
 }
 
+/* ---------- итоги месяца ---------- */
+// Месяц целиком: цифры, «месяц по дням», сферы, молитва, ночи ребёнка и то, что запомнилось.
+// Пока месяц идёт, сравниваем с теми же числами прошлого месяца, а не с целым месяцем.
+const MV = { off: 0, all: false };
+const monthOf = off => { const t = todayDate(); return new Date(t.getFullYear(), t.getMonth() + off, 1); };
+const monthEnd = first => new Date(first.getFullYear(), first.getMonth() + 1, 0);
+const MONTHS_GEN = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+const MONTHS_PREP = ["январе","феврале","марте","апреле","мае","июне","июле","августе","сентябре","октябре","ноябре","декабре"];
+function firstDataK() {
+  if (S.memoFirst?.data === S.data) return S.memoFirst.k;
+  const d = S.data, ks = [d.log, d.kid, d.prayer, d.rituals?.evening, d.focus, d.together].flatMap(o => Object.keys(o || {})).sort();
+  S.memoFirst = { data: d, k: ks[0] || null };
+  return S.memoFirst.k;
+}
+// Ночь принадлежит вечеру, когда ребёнок уснул: отбой k → подъём k+1
+function nightOf(k) {
+  const b = bedOf(k), w0 = wakeOf(addDaysK(k, 1));
+  if (b == null || w0 == null) return null;
+  const w = w0 + 1440, len = w - b;
+  if (len < 180 || len > 960) return null;
+  const wakes = (S.data.kid[k]?.nights || []).map(toMin).filter(x => x != null).map(x => x < 720 ? x + 1440 : x).filter(x => x > b && x < w);
+  return { k, b, w, len, wakes };
+}
+function monthStats(from, to) {
+  const t = todayDate(), end = to < t ? to : t, f0 = firstDataK();
+  const r = { days: 0, prayDays: 0, prayMin: 0, together: 0, ritual: 0, fDone: 0, fAll: 0, nights: [], reviews: 0, sundays: 0, slotMin: 0 };
+  for (let d = new Date(from); d <= end; d = addDays(d, 1)) {
+    const k = ymd(d);
+    if (!f0 || k < f0) continue;
+    r.days++;
+    const pm = prayMinutes(k);
+    if (pm) { r.prayDays++; r.prayMin += pm; }
+    if (S.data.together[k]) r.together++;
+    if (S.data.rituals?.evening?.[k]) r.ritual++;
+    const fc = S.data.focus[k] || [];
+    r.fAll += fc.length; r.fDone += fc.filter(x => focusDone(x, k)).length;
+    if (dow(d) === 6) r.sundays++;
+    const n = nightOf(k);
+    if (n) r.nights.push(n);
+  }
+  if (r.days) {
+    const a = ymd(from), b = ymd(end);
+    r.reviews = Object.values(S.data.reviews || {}).filter(v => v >= a && v <= b).length;
+    r.slotMin = slotStats(from, end).done;
+  }
+  return r;
+}
+const nightAvg = ns => ns.length ? { b: median(ns.map(n => n.b)), w: median(ns.map(n => n.w)), len: mean(ns.map(n => n.len)), wakes: mean(ns.map(n => n.wakes.length)) } : null;
+function renderMonthLink() {
+  const first = monthOf(0), r = monthStats(first, monthEnd(first)), el = $("#month-link");
+  el.hidden = !r.days;
+  if (!r.days) return;
+  $("#ml-title").textContent = MONTHS[first.getMonth()];
+  $("#ml-sub").textContent = [`молитва ${r.prayDays} ${plural(r.prayDays, "утро", "утра", "утр")}`, `вдвоём ${r.together} ${plural(r.together, "раз", "раза", "раз")}`,
+    `вечерние итоги ${r.ritual} из ${r.days}`].join(" · ");
+}
+function renderMonth() {
+  renderMonthLink();
+  if (currentView() !== "month") return;
+  const t = todayDate(), first = monthOf(MV.off), last = monthEnd(first), f0 = firstDataK();
+  const going = last >= t, end = going ? t : last, mi = first.getMonth(), nDays = last.getDate();
+  const r = monthStats(first, last);
+  // Прошлый месяц — за те же числа, пока текущий не закончился
+  const pFirst = monthOf(MV.off - 1), pLast = monthEnd(pFirst);
+  const pEnd = going ? new Date(pFirst.getFullYear(), pFirst.getMonth(), Math.min(t.getDate(), pLast.getDate())) : pLast;
+  const p = f0 && ymd(pFirst) >= f0 ? monthStats(pFirst, pEnd) : null;
+  const pName = MONTHS_PREP[pFirst.getMonth()];
+
+  $("#m-label").textContent = `${MONTHS[mi]} ${first.getFullYear()}`;
+  $("#m-prev").disabled = !f0 || ymd(first) <= f0;
+  $("#m-next").disabled = MV.off >= 0;
+  const startK = f0 && f0 > ymd(first) ? f0 : ymd(first);
+  if (!r.days) {
+    $("#m-lede").textContent = "За этот месяц записей нет.";
+    ["#m-kpi", "#m-strip", "#m-sph", "#m-pray", "#m-pray-tiles", "#m-nights", "#m-night-tiles", "#m-mom"].forEach(s => { $(s).innerHTML = ""; });
+    return;
+  }
+  const na = nightAvg(r.nights), pa = p ? nightAvg(p.nights) : null, name = kidName();
+  const lede = [
+    going ? `Месяц идёт: ${r.days} ${plural(r.days, "день", "дня", "дней")} из ${nDays}.` : startK > ymd(first) ? `Записи — с ${fmtDay.format(parse(startK))}.` : `Весь месяц, ${nDays} ${plural(nDays, "день", "дня", "дней")}.`,
+    `Молитва — ${r.prayDays} ${plural(r.prayDays, "утро", "утра", "утр")} из ${r.days}, вдвоём — ${r.together} ${plural(r.together, "раз", "раза", "раз")}`
+      + (na ? `, ${name} спал ночью в среднем ${fmtDur(na.len)}.` : "."),
+  ];
+  $("#m-lede").textContent = lede.join(" ");
+  const cmp = (v, pv, f = x => x) => p && p.days ? `<small>в ${pName}${going ? " за те же дни" : ""}: ${f(pv)}</small>` : "";
+  const tile = (v, l, c = "") => `<div><b>${v}</b><span>${l}</span>${c}</div>`;
+  const durOr = m => m ? fmtDur(m) : "0";
+  $("#m-kpi").innerHTML =
+    tile(`${r.prayDays} из ${r.days}`, "утр с молитвой", cmp(r.prayDays, p?.prayDays, v => `${v} из ${p.days}`))
+    + tile(durOr(r.prayMin), "в молитве всего", cmp(r.prayMin, p?.prayMin, durOr))
+    + tile(String(r.together), "вечеров вдвоём", cmp(r.together, p?.together))
+    + tile(`${r.ritual} из ${r.days}`, "вечерних итогов", cmp(r.ritual, p?.ritual, v => `${v} из ${p.days}`))
+    + tile(r.fAll ? `${r.fDone} из ${r.fAll}` : "—", "главных дел сделано", cmp(r.fDone, p?.fDone, v => p.fAll ? `${v} из ${p.fAll}` : "—"))
+    + tile(durOr(r.slotMin), "на цели в слотах", cmp(r.slotMin, p?.slotMin, durOr))
+    + tile(`${r.reviews}${r.sundays ? ` из ${r.sundays}` : ""}`, "обзоров недели", cmp(r.reviews, p?.reviews))
+    + tile(na ? fmtDur(na.len) : "—", `ночь ${kidGen()}`, cmp(0, 0, () => pa ? fmtDur(pa.len) : "—"));
+
+  // Месяц по дням: строка — привычка жизни, клетка — день. Пустая клетка — повода не было или ещё нет записей.
+  const days = Array.from({ length: nDays }, (_, i) => new Date(first.getFullYear(), mi, i + 1));
+  const lvl = (v, tip) => ({ l: v, tip });
+  const tracks = [
+    ["Молитва утром", (k) => { const m = prayMinutes(k); return lvl(m ? lvlOf(Math.min(1, m / prTarget())) : 0, m ? fmtDur(m) : "не было"); }],
+    ...(active().length ? [["Привычки", (k) => { const x = dayRatio(k); return x.total ? lvl(lvlOf(x.r), `${x.n} из ${x.total}`) : lvl(null, "привычек не было"); }]] : []),
+    ["Главное", (k) => { const fc = S.data.focus[k] || [], dn = fc.filter(x => focusDone(x, k)).length; return fc.length ? lvl(lvlOf(dn / fc.length), `сделано ${dn} из ${fc.length}`) : lvl(0, "не выбрано"); }],
+    ["Шаг к цели", (k, d) => { const sl = slotsOn(d); if (!sl.length) return lvl(null, "свободного слота не было");
+      const done = sl.map(x => sess(sKey(k, x.from))).filter(s => s?.status === "done"); return done.length ? lvl(4, done.map(s => s.text).join(", ")) : lvl(0, "слот без шага"); }],
+    ["Вечерние 5 минут", (k) => S.data.rituals?.evening?.[k] ? lvl(4, "пройдены") : lvl(0, "не было")],
+    ["Вдвоём", (k) => S.data.together[k] ? lvl(4, S.data.together[k].note || "были вдвоём") : lvl(0, "не было")],
+  ];
+  const tk = ymd(t);
+  $("#m-strip").innerHTML = tracks.map(([title, fn]) => {
+    let on = 0, of = 0;
+    const cells = days.map(d => {
+      const k = ymd(d), lab = fmtShort.format(d);
+      if (k > tk) return `<i class="fut"></i>`;
+      if (!f0 || k < f0) return `<i class="pre" data-tip="${esc(`${lab} · записей ещё нет`)}"></i>`;
+      const c = fn(k, d);
+      if (c.l == null) return `<i class="na${k === tk ? " today" : ""}" data-tip="${esc(`${lab} · ${c.tip}`)}"></i>`;
+      of++; if (c.l > 0) on++;
+      return `<i class="c${c.l}${k === tk ? " today" : ""}" data-tip="${esc(`${lab} · ${c.tip}`)}"></i>`;
+    }).join("");
+    return `<div class="ms-row"><div class="ms-l"><span>${esc(title)}</span><small>${on} из ${of}</small></div>
+      <div class="ms-cells" style="--n:${nDays}" role="img" aria-label="${esc(`${title}: ${on} из ${of} дней`)}">${cells}</div></div>`;
+  }).join("") + `<div class="ms-cells ms-ax" style="--n:${nDays}" aria-hidden="true">${days.map(d => `<span>${dow(d) === 0 || d.getDate() === 1 ? d.getDate() : ""}</span>`).join("")}</div>`;
+
+  // Сферы: сколько дней было время у каждой сферы против нормы за прошедшие дни
+  const act = sphereActivity(startK, ymd(end)), span = r.days;
+  const rows = (settings().spheres || []).map(s => ({ s, n: Object.keys(act[s] || {}).length, norm: normOf(s) }))
+    .sort((a, b) => (b.norm > 0) - (a.norm > 0) || b.n - a.n);
+  // Сферы «когда нужно» без дел за месяц не показываем — им и не нужно было время
+  const quiet = rows.filter(x => !x.norm && !x.n);
+  $("#m-sph").innerHTML = rows.filter(x => x.norm || x.n).map(x => {
+    const exp = x.norm ? Math.round(x.norm * span / 7) : null;
+    const v = `${x.n} ${plural(x.n, "день", "дня", "дней")}${exp != null ? ` · норма ≈ ${exp}` : " · когда нужно"}`;
+    return `<li class="${x.norm ? "" : "od"}"><div class="hb-top"><span>${esc(capF(x.s))}</span><span class="v">${v}</span></div>
+      <div class="hb m-hb"><i style="width:${Math.min(100, x.n / span * 100)}%"></i>${exp != null ? `<b style="left:${Math.min(100, exp / span * 100)}%"></b>` : ""}</div></li>`;
+  }).join("") + (quiet.length ? `<li class="empty">Без дел в этом месяце: ${esc(quiet.map(x => x.s).join(", "))} — им время нужно только по делу.</li>` : "");
+  $("#m-sph-cap").textContent = `Дни, когда сфере досталось время, из ${span}. Черта — сколько дней нужно по норме.`;
+
+  // Молитва по дням
+  const tgt = prTarget(), pd = days.map(d => {
+    const k = ymd(d), m = k > tk ? null : prayMinutes(k);
+    return { label: dow(d) === 0 || d.getDate() === 1 ? String(d.getDate()) : "", value: m, current: k === tk, tip: `${fmtShort.format(d)} · ${m ? fmtDur(m) : k > tk ? "впереди" : "не было"}` };
+  });
+  barChart($("#m-pray"), pd, { max: Math.ceil(Math.max(tgt * 1.4, ...pd.map(x => x.value || 0)) / 10) * 10, fmt: v => `${Math.round(v)} мин`, line: tgt, empty: "В этом месяце молитв с таймером не было." });
+  let best = 0, run = 0;
+  days.forEach(d => { if (prayMinutes(ymd(d))) best = Math.max(best, ++run); else run = 0; });
+  $("#m-pray-tiles").innerHTML = !r.prayDays ? "" : tile(r.prayDays ? fmtDur(r.prayMin / r.prayDays) : "—", "в среднем за утро")
+    + tile(`${best} ${plural(best, "день", "дня", "дней")}`, "самая длинная серия");
+
+  // Ночи ребёнка
+  const nd = days.map(d => ({ d, n: nightOf(ymd(d)) }));
+  nightChart($("#m-nights"), nd);
+  $("#m-nights-h").textContent = `Ночи ${kidGen()}`;
+  const nt = (v, pv, l) => tile(v, l, pa ? `<small>в ${pName}: ${pv}</small>` : "");
+  $("#m-night-tiles").innerHTML = na ? nt(hm(na.b), hm(pa?.b), "обычный отбой") + nt(hm(na.w), hm(pa?.w), "обычный подъём")
+    + nt(fmtDur(na.len), pa && fmtDur(pa.len), "ночь в среднем") + nt(fmt1(na.wakes), pa && fmt1(pa.wakes), "просыпался за ночь") : "";
+
+  // Что было: ответы на молитвы, вечера вдвоём, шаги к целям, обзоры
+  const a = ymd(first), b = ymd(last), inM = k => k && k >= a && k <= b, mom = [];
+  needs().forEach(n => {
+    if (inM(n.answered)) mom.push({ k: n.answered, cls: "ans", kind: "Ответ на молитву", t: n.t, sub: n.note });
+    if (inM(n.created)) mom.push({ k: n.created, cls: "need", kind: "Новая нужда", t: n.t });
+  });
+  Object.entries(S.data.together).forEach(([k, v]) => { if (inM(k)) mom.push({ k, cls: "tg", kind: "Вдвоём", t: v.note || "были вдвоём" }); });
+  Object.entries(S.data.sessions).forEach(([key, s]) => { const k = key.slice(0, 10); if (inM(k) && s.status === "done") mom.push({ k, cls: "step", kind: "Шаг к цели", t: s.text, sub: s.project || goalTitle(s.goal) }); });
+  Object.values(S.data.reviews || {}).forEach(k => { if (inM(k)) mom.push({ k, cls: "rev", kind: "Обзор недели", t: "неделя подведена" }); });
+  mom.sort((x, y) => x.k < y.k ? 1 : -1);
+  const shown = MV.all ? mom : mom.slice(0, 8);
+  $("#m-mom").innerHTML = shown.map(x => `<li class="${x.cls}"><span class="d">${fmtDM.format(parse(x.k))}</span><span class="dot" aria-hidden="true"></span>
+    <span class="t"><small>${esc(x.kind)}</small>${esc(x.t)}${x.sub ? `<em>${esc(x.sub)}</em>` : ""}</span></li>`).join("")
+    || `<li class="empty">Здесь соберутся ответы на молитвы, вечера вдвоём и шаги к целям.</li>`;
+  $("#m-mom-all").hidden = mom.length <= 8;
+  $("#m-mom-all").textContent = MV.all ? "Свернуть" : `Показать все ${mom.length}`;
+}
+// Ночь — вертикальная полоса от отбоя до подъёма; точки — пробуждения ненадолго
+function nightChart(el, days) {
+  const ns = days.filter(x => x.n);
+  if (!ns.length) { el.innerHTML = `<p class="empty-c">Появится, когда в этом месяце будут отмечены отбой и подъём.</p>`; return; }
+  const W = chartWidth(el), H = 230, pl = 40, pr = 4, pt = 8, pb = 22;
+  const iw = W - pl - pr, ih = H - pt - pb, step = iw / days.length, bw = Math.max(4, Math.min(12, step * .6));
+  const ys = timeScale(ns.flatMap(x => [x.n.b, x.n.w]), 15), Y = v => pt + (v - ys.lo) / (ys.hi - ys.lo) * ih;
+  const ticks = ys.ticks.length > 8 ? ys.ticks.filter(v => v % 120 === 0) : ys.ticks;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Ночи: отбой и подъём по дням">`;
+  ticks.forEach(v => { s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" class="grid"/><text x="${pl - 6}" y="${Y(v) + 3.5}" class="ax" text-anchor="end">${hm(v)}</text>`; });
+  days.forEach(({ d, n }, i) => {
+    const cx = pl + step * i + step / 2;
+    if (n) {
+      s += `<rect x="${cx - bw / 2}" y="${Y(n.b)}" width="${bw}" height="${Math.max(2, Y(n.w) - Y(n.b))}" rx="${bw / 2}" class="nbar"/>`;
+      n.wakes.forEach(x => { s += `<circle cx="${cx}" cy="${Y(x)}" r="4" class="dot"/>`; });
+      const tipT = `${fmtShort.format(d)} → утро · ${hm(n.b)}–${hm(n.w)}, ${fmtDur(n.len)}${n.wakes.length ? ` · просыпался в ${n.wakes.map(hm).join(", ")}` : ""}`;
+      s += `<rect x="${pl + step * i}" y="${pt}" width="${step}" height="${ih}" fill="transparent" data-tip="${esc(tipT)}"/>`;
+    }
+    if (dow(d) === 0 || d.getDate() === 1) s += `<text x="${cx}" y="${H - 6}" class="ax" text-anchor="middle">${d.getDate()}</text>`;
+  });
+  el.innerHTML = s + "</svg>";
+}
+
 /* ---------- ритуалы ---------- */
 function ritualDue() {
   const hr = new Date().getHours(), t = todayDate(), dw = dow(t);
@@ -3146,7 +3348,7 @@ setInterval(() => {
 let lastW = innerWidth;
 addEventListener("resize", () => {
   clearTimeout(S.rz);
-  S.rz = setTimeout(() => { if (Math.abs(innerWidth - lastW) > 20 && S.data) { lastW = innerWidth; renderKid(); renderGoals(); renderProgress(); } }, 200);
+  S.rz = setTimeout(() => { if (Math.abs(innerWidth - lastW) > 20 && S.data) { lastW = innerWidth; renderKid(); renderGoals(); renderProgress(); renderMonth(); } }, 200);
 });
 // GitHub Pages отдаёт index.html с кэшем на 10 минут, а ярлык на iPhone держит страницу ещё дольше.
 // При открытии сверяем версию app.js с сервером: если вышла новая — обновляем кэш и перезагружаемся.

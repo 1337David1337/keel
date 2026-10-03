@@ -12,6 +12,19 @@ for (const [hash, heading] of Object.entries(TABS)) {
   });
 }
 
+test("итоги месяца открываются из «Итогов», листаются назад и не дают горизонтальной прокрутки", async ({ page }) => {
+  const { errors } = await open(page, { hash: "results" });
+  await page.locator("#month-link").click();
+  await expect(page.locator("#m-label")).toHaveText("Октябрь 2026");
+  await expect(page.locator("#m-strip .ms-row")).toHaveCount(6);
+  await expect(page.locator(".side-nav a[aria-current], .tabs a[aria-current], [data-nav] a[aria-current]").first()).toHaveAttribute("href", "#results");
+  await page.locator("#m-prev").click();
+  await expect(page.locator("#m-label")).toHaveText("Сентябрь 2026");
+  await expect(page.locator("#m-prev")).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  expect(errors).toEqual([]);
+});
+
 test("старые адреса вкладок открывают новые", async ({ page }) => {
   await open(page, { hash: "morning" });
   await expect(page.locator('.view[data-view="sleep"]')).toBeVisible();

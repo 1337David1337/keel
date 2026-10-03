@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=PT+Serif:ital@0;1&display=swap">
-<link rel="stylesheet" href="style.css?v=43">
+<link rel="stylesheet" href="style.css?v=44">
 </head>
 <body>
 <aside class="side" aria-label="Разделы">
@@ -293,6 +293,10 @@
 
     <!-- ================= ИТОГИ ================= -->
     <div class="view" data-view="results" hidden>
+      <a class="card span2 month-link" href="#month" id="month-link" hidden>
+        <span class="ml-main"><small>Итоги месяца</small><b id="ml-title"></b><span id="ml-sub"></span></span>
+        <span class="ml-go" aria-hidden="true">→</span>
+      </a>
       <section class="card span2 keel" id="keel-card" hidden>
         <div class="card-h"><h2>Равновесие недели</h2><small id="keel-word"></small></div>
         <a class="keel-boat" id="keel-boat" href="#plan" aria-label="Баланс сфер — открыть в «Плане»"></a>
@@ -362,6 +366,48 @@
             <ul class="hbars" id="ft-goals"></ul>
           </figure>
         </div>
+      </section>
+    </div>
+
+    <!-- ================= ИТОГИ МЕСЯЦА ================= -->
+    <div class="view" data-view="month" hidden>
+      <section class="card span2 m-hero">
+        <div class="per-nav">
+          <a class="m-back" href="#results">← Итоги</a>
+          <span class="sp"></span>
+          <button type="button" id="m-prev" aria-label="Предыдущий месяц">←</button>
+          <span class="nav-l" id="m-label"></span>
+          <button type="button" id="m-next" aria-label="Следующий месяц">→</button>
+        </div>
+        <p class="m-lede" id="m-lede"></p>
+        <div class="tiles m-kpi" id="m-kpi"></div>
+      </section>
+      <section class="card span2">
+        <div class="card-h"><h2>Месяц по дням</h2><small>числа — понедельники</small></div>
+        <div id="m-strip"></div>
+        <div class="legend" aria-hidden="true">меньше
+          <i style="background:var(--s0)"></i><i style="background:var(--s1)"></i><i style="background:var(--s2)"></i><i style="background:var(--s3)"></i><i style="background:var(--s4)"></i>
+          больше <span class="gap"></span> пусто — повода не было</div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2>Сферы</h2></div>
+        <p class="note m-cap" id="m-sph-cap"></p>
+        <ul class="hbars m-sph" id="m-sph"></ul>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2>Молитва</h2><small>минут за утро · черта — цель</small></div>
+        <div class="chart" id="m-pray"></div>
+        <div class="tiles m-sub" id="m-pray-tiles"></div>
+      </section>
+      <section class="card span2">
+        <div class="card-h"><h2 id="m-nights-h">Ночи</h2><small>полоса — от отбоя до подъёма · точка — проснулся ненадолго</small></div>
+        <div class="chart" id="m-nights"></div>
+        <div class="tiles m-kpi m-sub" id="m-night-tiles"></div>
+      </section>
+      <section class="card span2">
+        <div class="card-h"><h2>Что было в этом месяце</h2></div>
+        <ul class="m-mom" id="m-mom"></ul>
+        <button type="button" class="btn ghost sm" id="m-mom-all" hidden></button>
       </section>
     </div>
 
@@ -582,6 +628,6 @@
 <div class="tip" id="tip" hidden></div>
 <script src="demo-data.js?v=2"></script>
 <script src="verses.js?v=2"></script>
-<script src="app.js?v=51"></script>
+<script src="app.js?v=52"></script>
 </body>
 </html>

@@ -18,34 +18,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Oswald:wght@400;500;600&family=PT+Serif:ital@0;1&display=swap">
-<link rel="stylesheet" href="style.css?v=45">
+<link rel="stylesheet" href="style.css?v=46">
 </head>
 <body>
 <div id="sky" aria-hidden="true"></div>
 <canvas id="stars" aria-hidden="true"></canvas>
-<aside class="side" aria-label="Разделы">
-  <div class="brand"><img src="icon.svg" alt="" width="28" height="28">Стезя</div>
-  <nav class="side-nav" data-nav></nav>
-</aside>
 
 <div class="app">
   <header class="top">
-    <div class="top-row">
-      <span class="eyebrow" id="period-line">Стезя</span>
+    <div class="ttl">
+      <h1 id="today-title">Стезя</h1>
+      <p class="tagline" id="tagline">Он направит стези твои<small>Пр 3:6</small></p>
+      <span class="eyebrow" id="period-line" hidden></span>
+    </div>
+    <nav class="tabs" aria-label="Разделы" data-nav></nav>
+    <div class="clock">
+      <div class="clk-t" id="clk" aria-hidden="true">--:--</div>
+      <div class="clk-d" id="clk-d" aria-hidden="true"></div>
+      <div class="clk-s" id="sun-t" aria-hidden="true"></div>
       <div class="top-r">
         <button type="button" class="sync" id="sync" title="Обновить с GitHub">не подключено</button>
         <a href="#settings" class="gear" aria-label="Настройки" title="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a>
-      </div>
-    </div>
-    <div class="top-main">
-      <div class="ttl">
-        <h1 id="today-title">Стезя</h1>
-        <p class="tagline" id="tagline">Он направит стези твои<small>Пр 3:6</small></p>
-      </div>
-      <div class="clock" aria-hidden="true">
-        <div class="clk-t" id="clk">--:--</div>
-        <div class="clk-d" id="clk-d"></div>
-        <div class="clk-s" id="sun-t"></div>
       </div>
     </div>
     <p class="lede" id="today-sum" hidden></p>
@@ -54,18 +47,33 @@
 
   <main id="main" hidden>
     <!-- ================= СЕГОДНЯ ================= -->
-    <div class="view" data-view="today">
-      <section class="span2 hero" id="hero" aria-label="Курс дня">
-        <p class="status" id="hero-status"></p>
-        <canvas id="compass" aria-label="Компас: стрелка указывает на сферу, которой сейчас нужно время. Нажмите на сферу, чтобы посмотреть её."></canvas>
-        <h2 class="phase" id="phase">Сегодня</h2>
-        <p class="phase-sub" id="phase-sub"></p>
-        <p class="lede" id="hero-sum"></p>
-        <div class="hero-foot" id="hero-foot"></div>
-      </section>
-      <section class="card span2 verse" id="verse-card" aria-label="Стих дня" hidden></section>
-      <section class="span2">
-        <div class="kid-actions">
+    <div class="view today-v" data-view="today">
+      <div class="col-c">
+        <section class="hero" id="hero" aria-label="Курс дня">
+          <p class="status" id="hero-status"></p>
+          <canvas id="compass" aria-label="Компас: стрелка указывает на сферу, которой сейчас нужно время. Нажмите на сферу, чтобы посмотреть её."></canvas>
+          <h2 class="phase" id="phase">Сегодня</h2>
+          <p class="phase-sub" id="phase-sub"></p>
+          <p class="lede" id="hero-sum"></p>
+          <div class="hero-foot" id="hero-foot"></div>
+        </section>
+        <section class="verse" id="verse-card" aria-label="Стих дня" hidden></section>
+      </div>
+      <div class="col-l">
+        <section class="metrics" id="metrics">
+          <div class="card-h"><h2>Показатели</h2><small>7 дней</small></div>
+          <div id="metric-list"></div>
+          <a class="frame" id="review-frame" href="#plan"></a>
+        </section>
+        <section class="card" id="habits">
+          <div class="card-h"><h2>Привычки</h2><small id="hab-count"></small></div>
+          <ul class="today" id="today-list"></ul>
+        </section>
+      </div>
+      <div class="col-r">
+        <section class="mark" id="mark">
+          <div class="card-h"><h2>Отметить</h2><small>одним касанием</small></div>
+          <div class="kid-actions">
           <button type="button" class="kbtn kid" id="kid-wake">
             <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="19" r="6" fill="var(--amber)"/><path d="M16 6v4M6.5 10l2.8 2.8M25.5 10l-2.8 2.8M3 25h26" stroke="var(--amber)" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
             <span><b id="kid-wake-l">Проснулся</b><span id="kid-wake-s"></span></span>
@@ -86,18 +94,29 @@
             <span><b id="me-wake-l">Я встал</b><span id="me-wake-s"></span></span>
           <span class="kgo" aria-hidden="true">Отметить</span>
           </button>
-        </div>
-        <div class="done-chips" id="kid-done"></div>
-      </section>
-
-      <section class="card span2 pray-card" id="pray-card" hidden></section>
-      <section class="card span2 pray-card duo-card" id="duo-card" hidden></section>
-      <section class="card span2 ritual" id="ritual-card" hidden></section>
-      <section class="card span2 slot-card" id="slot-card" hidden></section>
-
+          </div>
+          <div class="done-chips" id="kid-done"></div>
+        </section>
+        <section class="card pray-card" id="pray-card" hidden></section>
+        <section class="card pray-card duo-card" id="duo-card" hidden></section>
+        <section class="card ritual" id="ritual-card" hidden></section>
+        <section class="card slot-card" id="slot-card" hidden></section>
+        <section class="card bal" id="focus-card">
+          <div class="card-h"><h2>Главное на сегодня</h2><small id="focus-count"></small></div>
+          <ul class="focus" id="focus-list"></ul>
+          <div class="bal-sub" id="bal-sub" hidden><p class="bal-h" id="bal-title">Сферы за неделю</p>
+            <a class="rings" id="bal-batts" href="#plan" hidden></a>
+            <div class="bal-rec" id="bal-rec"></div></div>
+        </section>
+        <section class="card" id="tasks">
+          <div class="card-h"><h2 id="tasks-title">Задачи</h2><small>Google Задачи</small></div>
+          <ul class="ptasks" id="plan-tasks"></ul>
+          <p class="pt-foot" id="plan-foot"></p>
+        </section>
+      </div>
       <section class="card" id="day">
         <div class="card-h">
-          <h2 id="day-title">День</h2>
+          <h2><span class="dk">⌘ Лента дня</span><span id="day-title">День</span></h2>
           <div class="seg" role="tablist" aria-label="День">
             <button type="button" role="tab" data-day="0">Сегодня</button>
             <button type="button" role="tab" data-day="1">Завтра</button>
@@ -107,25 +126,6 @@
         <ol class="tl" id="day-tl"></ol>
         <button type="button" class="linkbtn tl-more" id="day-toggle" aria-controls="day-tl">Показать весь день</button>
       </section>
-
-      <div class="stack">
-        <section class="card bal" id="focus-card">
-          <div class="card-h"><h2>Главное на сегодня</h2><small id="focus-count"></small></div>
-          <ul class="focus" id="focus-list"></ul>
-          <div class="bal-sub" id="bal-sub" hidden><p class="bal-h" id="bal-title">Сферы за неделю</p>
-            <a class="rings" id="bal-batts" href="#plan" hidden></a>
-            <div class="bal-rec" id="bal-rec"></div></div>
-        </section>
-        <section class="card">
-          <div class="card-h"><h2>Привычки</h2><small id="hab-count"></small></div>
-          <ul class="today" id="today-list"></ul>
-        </section>
-        <section class="card">
-          <div class="card-h"><h2 id="tasks-title">Задачи</h2><small>Google Задачи</small></div>
-          <ul class="ptasks" id="plan-tasks"></ul>
-          <p class="pt-foot" id="plan-foot"></p>
-        </section>
-      </div>
     </div>
 
     <!-- ================= СОН ================= -->
@@ -314,11 +314,6 @@
         <span class="ml-main"><small>Итоги месяца</small><b id="ml-title"></b><span id="ml-sub"></span></span>
         <span class="ml-go" aria-hidden="true">→</span>
       </a>
-      <section class="card span2 keel" id="keel-card" hidden>
-        <div class="card-h"><h2>Равновесие недели</h2><small id="keel-word"></small></div>
-        <a class="keel-boat" id="keel-boat" href="#plan" aria-label="Баланс сфер — открыть в «Плане»"></a>
-        <div class="keel-sides" id="keel-sides"></div>
-      </section>
       <section class="card span2" id="week">
         <div class="card-h">
           <h2>Неделя</h2>
@@ -647,6 +642,6 @@
 <script src="demo-data.js?v=2"></script>
 <script src="verses.js?v=2"></script>
 <script src="compass.js?v=1"></script>
-<script src="app.js?v=53"></script>
+<script src="app.js?v=54"></script>
 </body>
 </html>

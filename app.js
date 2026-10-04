@@ -694,7 +694,7 @@ function render() {
   renderRitualCard(); renderSlotCard(); renderFocus(); renderBalance(); renderSlotPlan(); renderFocusTime();
   renderMonth();
   renderPrayCard(); renderDuoCard(); renderVerse(); renderPrayStats(); renderPraySettings(); renderNeeds(); renderRemind();
-  renderHero();
+  renderHero(); renderMetrics();
 }
 function renderHeader() {
   const t = todayDate(), tk = ymd(t), v = currentView();
@@ -1338,7 +1338,7 @@ function renderPlan() {
     ? `<span>${isToday ? "Дальше" : "Завтра"}:</span> ${ahead.map(e => `<b>${esc(e.time)}</b> ${esc(e.b)}`).join(" · ")}`
     : cur.length ? "" : `<span>${isToday ? "На сегодня в ленте больше ничего" : "На завтра в ленте пусто"}</span>`].filter(Boolean).join("<br>");
   $("#day").classList.toggle("open", !!S.dayOpen);
-  $("#day-toggle").textContent = S.dayOpen ? "Свернуть" : "Показать весь день";
+  $("#day-toggle").textContent = S.dayOpen ? "Свернуть ⌄" : "Весь день ⌃";
   $("#day-toggle").setAttribute("aria-expanded", String(!!S.dayOpen));
   $("#day-tl").innerHTML = ev.filter(e => !e.now).length
     ? ev.map(e => e.now ? `<li class="now"><time>${e.time}</time><span>сейчас</span></li>`
@@ -2318,7 +2318,7 @@ function ringHtml(r, hot) {
 }
 function renderBalance() {
   const sp = settings().spheres || [];
-  $("#bal-batts").hidden = $("#bal-sub").hidden = $("#balance").hidden = $("#keel-card").hidden = !sp.length;
+  $("#bal-batts").hidden = $("#bal-sub").hidden = $("#balance").hidden = !sp.length;
   if (!sp.length) return;
   const tgt = planTarget(), tgtK = ymd(tgt), tk = ymd(todayDate()), isT = tgtK === tk, rows = balance(tgtK), st = settings();
   const chosen = (S.data.focus[tgtK] || []).length;
@@ -2348,7 +2348,6 @@ function renderBalance() {
       + (full ? `<p class="note" style="margin:0">На ${isT ? "сегодня" : "завтра"} уже три дела. Нажми на выбранное, чтобы убрать.</p>` : "")
     : `<p class="bal-ok">Все сферы в своей норме — можно идти по обычному плану.</p>`;
   renderBalanceStats(rows);
-  renderKeel(rows);
 }
 const capF = s => s.charAt(0).toUpperCase() + s.slice(1);
 const dayLabel = k => { const d = parse(k); return `${DOW[dow(d)].toLowerCase()}, ${d.getDate()}`; };
@@ -2378,26 +2377,6 @@ function balDetail(i, j) {
   const tail = r.onDemand ? "Сфера без ритма: Стезя предложит её, когда есть дело со сроком."
     : r.touched ? `За неделю ${r.touched} из ${r.norm}.` : `За неделю ни разу${r.last ? `, последний раз ${dayLabel(r.last)}` : ""}. Нужно ${dayWord(r.norm)} в неделю.`;
   $("#bl-detail").innerHTML = `<b>${esc(capF(r.s))}, ${dayLabel(d.k)}:</b> ${esc(what)}. ${tail}`;
-}
-// «Итоги»: лодка кренится, когда одним сферам достаётся больше нормы, а другим почти ничего
-function renderKeel(rows) {
-  const rr = rows.filter(r => !r.onDemand), box = $("#keel-card");
-  box.hidden = !rr.length;
-  if (!rr.length) return;
-  const ratio = r => Math.min(2, r.touched / r.norm), over = rr.filter(r => r.touched > r.norm), under = rr.filter(r => ratio(r) < .5);
-  const spread = rr.reduce((a, r) => a + Math.abs(ratio(r) - 1), 0) / rr.length;
-  const deg = Math.min(over.length && under.length ? 18 : 6, Math.round(spread * 22));
-  $("#keel-word").textContent = deg < 5 ? "идёшь ровно" : deg < 12 ? "небольшой крен" : "сильный крен";
-  const wave = (y, cls) => `<path class="${cls}" d="M0 ${y}${" q15 -6 30 0 t30 0".repeat(8)} V200 H0 Z"/>`;
-  setHtml($("#keel-boat"), `<svg viewBox="0 0 360 190" role="img" aria-label="Лодка накренилась на ${deg}°">${wave(132, "w1")}
-    <g class="tilt" style="--deg:${-deg}deg"><g class="bob">
-      <path class="kl" d="M180 130 L174 178 H186 Z"/><path class="hull" d="M96 116 H264 L244 140 H116 Z"/>
-      <line class="mast" x1="180" y1="116" x2="180" y2="28"/><path class="s1" d="M184 32 V110 H240 Z"/><path class="s2" d="M176 40 V110 H132 Z"/>
-    </g></g>${wave(146, "w2")}</svg>`);
-  const list = l => l.map(r => `${esc(capF(r.s))} <span>${r.touched} из ${r.norm}</span>`).join("<br>");
-  $("#keel-sides").innerHTML = over.length || under.length
-    ? `<div><b>Перевес</b>${list(over) || "нет"}</div><div><b>Выровнять</b>${list(under) || "нет"}</div>`
-    : `<p class="bal-ok">Все сферы около своей нормы.</p>`;
 }
 const CARE_MARK = "отмечено вручную";
 // Кнопки «уделил время сфере» за день k: что уже видно по привычкам и задачам, отмечено само
@@ -3331,6 +3310,53 @@ $("#need-list").addEventListener("submit", e => {
   toast(`Ответ записан: ${fmtShort.format(parse(date))}`, () => op({ t: "need", id, data: { answered: null, note: "" } }));
 });
 
+/* ---------- показатели за 7 дней (левая колонка «Сегодня») ---------- */
+// Ступенчатый график, как на приборах: горизонталь — день, наклон — переход к следующему
+function spark(vals, color) {
+  const pts = vals.map((v, i) => [i, v]).filter(p => p[1] != null);
+  if (pts.length < 2) return "";
+  const W = 300, H = 44, n = vals.length - 1, ys = pts.map(p => p[1]), mn = Math.min(...ys), mx = Math.max(...ys);
+  const xy = ([i, v]) => [i / n * W, H - 6 - (v - mn) / ((mx - mn) || 1) * (H - 14)];
+  const P = pts.map(xy), step = W / n * .25;
+  const d = P.map(([x, y], i) => i ? `L${(x - step).toFixed(1)},${P[i - 1][1].toFixed(1)} L${x.toFixed(1)},${y.toFixed(1)}` : `M${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const [lx, ly] = P[P.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" fill="none" stroke="${color}" stroke-opacity=".8" stroke-width="1.4" vector-effect="non-scaling-stroke"/>`
+    + `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3" fill="${color}"/><circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="7" fill="${color}" opacity=".2"/></svg>`;
+}
+const hmMin = s => { const [h, m] = String(s).split(":").map(Number); return h * 60 + m; };
+const minHm = m => `${Math.floor(m / 60)}:${pad(Math.round(m) % 60)}`;
+function renderMetrics() {
+  if (!S.data) return;
+  const tk = ymd(todayDate()), week = Array.from({ length: 7 }, (_, i) => addDaysK(tk, i - 6)), prev = week.map(k => addDaysK(k, -7)), out = [];
+  const metric = (c, k, r, v, sub, sp) => `<div class="metric" style="--c:${c}"><div class="m-h"><span class="k">${k}</span><span class="r">${r}</span></div><div class="m-v">${v}<small>${sub}</small></div>${sp}</div>`;
+  // подъём ребёнка: медиана недели и сдвиг к прошлой
+  const wake = ks => ks.map(k => S.data.kid[k]?.wake ? hmMin(S.data.kid[k].wake) : null);
+  const w = wake(week), wv = w.filter(x => x != null), pv = wake(prev).filter(x => x != null);
+  if (wv.length) {
+    const m = median(wv), d = pv.length ? Math.round(m - median(pv)) : 0;
+    const r = !pv.length || Math.abs(d) < 3 ? "как на прошлой неделе" : d < 0 ? `<em>▲</em> на ${-d} мин раньше` : `<em>▼</em> на ${d} мин позже`;
+    out.push(metric("var(--amber)", `Подъём ${esc(kidGen())}`, r, minHm(m), "медиана", spark(w, "var(--amber)")));
+  }
+  // молитва: минут в день в среднем за неделю
+  const pr = week.map(prayMinutes), avg = Math.round(pr.reduce((a, x) => a + x, 0) / 7);
+  out.push(metric("var(--violet)", "Молитва", `цель <em>${prTarget()}</em> мин`, avg, "мин / день", spark(pr, "var(--violet)")));
+  // сферы: сколько из ритмичных набрали норму, и куда перекос
+  const rows = balance(tk).filter(r => !r.onDemand);
+  if (rows.length) {
+    const ok = rows.filter(r => r.touched >= r.norm).length, over = rows.filter(r => r.touched > r.norm).sort((a, b) => b.touched / b.norm - a.touched / a.norm)[0];
+    const perDay = week.map((k, j) => rows.filter(r => r.week[j].what).length);
+    out.push(metric("var(--teal)", "Сферы в норме", `из <em>${rows.length}</em>`, ok, over ? `перевес: ${esc(over.s)}` : "без перевеса", spark(perDay, "var(--teal)")));
+  }
+  setHtml($("#metric-list"), out.join(""));
+  // обзор недели: серия подряд на шкале 12-недельного цикла
+  const n = reviewStreak(), pos = Math.min(n, 12) / 12;
+  setHtml($("#review-frame"), `<i class="c1"></i><i class="c2"></i><span class="lbl">Обзор недели · серия</span>
+    <span class="f-sub">${S.data.reviews[weekKey(monday(todayDate()))] ? "на этой неделе — проведён" : "на этой неделе ещё впереди"}</span>
+    <span class="big">${n}<small>${plural(n, "неделя", "недели", "недель")} подряд</small></span>
+    <span class="gauge">${Array.from({ length: 24 }, (_, i) => `<i class="${i < pos * 24 ? "on" : ""}"></i>`).join("")}<b style="left:${(pos * 100).toFixed(1)}%"></b></span>
+    <span class="scale"><span>0</span><span>3</span><span>6</span><span>9</span><span>12</span></span>`);
+}
+
 /* ---------- курс дня: компас на «Сегодня» ---------- */
 // sel — сфера, которую открыли тапом по компасу; show — в воскресенье всё-таки показать дела; redOff — обычный свет до перезагрузки
 const H = { sel: -1, show: false, redOff: false };
@@ -3513,7 +3539,7 @@ async function rmDisable() {
 }
 async function rmTest() {
   const reg = await navigator.serviceWorker.getRegistration();
-  if (reg) await reg.showNotification("Keel · проверка", { body: "Так будут выглядеть напоминания.", icon: "icon-192.png", tag: "keel-test" });
+  if (reg) await reg.showNotification("Стезя · проверка", { body: "Так будут выглядеть напоминания.", icon: "icon-192.png", tag: "keel-test" });
 }
 function renderRemind() {
   if (!S.data) return;

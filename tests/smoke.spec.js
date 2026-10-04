@@ -226,15 +226,12 @@ test("баланс: рутина видна, но не засчитываетс�
   await expect(page.locator('#bal-tags select[data-tag="t1"]')).toHaveValue("рост");
 });
 
-test("баланс: клетка недели объясняет, что засчиталось, а лодка в «Итогах» видна", async ({ page }) => {
+test("баланс: клетка недели объясняет, что засчиталось", async ({ page }) => {
   await open(page, { hash: "plan" });
   const cell = page.locator("#bl-list .bg-c.on").first();
   const label = await cell.getAttribute("aria-label");
   await cell.click();
   await expect(page.locator("#bl-detail")).toContainText(label.split(": ")[1].split(", ")[0]);
-  await page.goto("/#results");
-  await expect(page.locator("#keel-card")).toBeVisible();
-  await expect(page.locator("#keel-word")).not.toBeEmpty();
 });
 
 test("лента дня: работа, которая идёт сейчас, — под «сейчас», а не в прошлом", async ({ page }) => {

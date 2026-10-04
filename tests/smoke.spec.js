@@ -271,12 +271,12 @@ test("вид по солнцу: днём — карта, после заката
   expect(errors).toEqual([]);
 });
 
-test("воскресенье: «День Господень» без упора и дел, дела — по кнопке", async ({ page }) => {
+test("воскресенье: «Воскресный день» без упора и дел, дела — по кнопке", async ({ page }) => {
   const { errors } = await open(page);
   await page.clock.setFixedTime("2026-10-04T12:00:00+03:00");
   await page.reload();
   await page.locator("#main").waitFor({ state: "visible" });
-  await expect(page.locator("#phase")).toHaveText("День Господень");
+  await expect(page.locator("#phase")).toHaveText("Воскресный день");
   await expect(page.locator("#focus-card")).toBeHidden();
   await expect(page.locator("#verse-card cite")).toHaveText("Псалом 117:24");
   await page.locator('#hero [data-hero="show"]').click();

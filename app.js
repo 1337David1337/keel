@@ -3085,7 +3085,7 @@ function verseOf(k) {
   const n = Math.round((parse(k) - new Date(2026, 0, 1)) / 864e5);
   return list[((n % list.length) + list.length) % list.length];
 }
-// В воскресенье — свой стих: день Господень без упора и без дел
+// В воскресенье — свой стих: воскресный день без упора и без дел
 const SUNDAY_VERSE = { r: "Псалом 117:24", t: "Сей день сотворил Господь: возрадуемся и возвеселимся в оный!", a: "Церковь, семья и покой — дела подождут до понедельника." };
 // Текст проявляется, как расшифровка сигнала: буквы перебираются и встают на место слева направо
 function scramble(el, text, dur = 1600) {
@@ -3323,29 +3323,43 @@ function spark(vals, color) {
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" fill="none" stroke="${color}" stroke-opacity=".8" stroke-width="1.4" vector-effect="non-scaling-stroke"/>`
     + `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3" fill="${color}"/><circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="7" fill="${color}" opacity=".2"/></svg>`;
 }
+function bars(vals, color, target) {
+  const W = 300, H = 44, n = vals.length, gap = 6, bw = (W - gap * (n - 1)) / n, top = Math.max(target || 0, ...vals.filter(v => v != null), 1);
+  const ty = target ? H - target / top * (H - 4) : null;
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">`
+    + vals.map((v, i) => { const x = (i * (bw + gap)).toFixed(1); return v == null ? `<rect x="${x}" y="${H - 2}" width="${bw.toFixed(1)}" height="2" fill="var(--line2)" opacity=".5"/>`
+      : v ? `<rect x="${x}" y="${(H - v / top * (H - 4)).toFixed(1)}" width="${bw.toFixed(1)}" height="${(v / top * (H - 4)).toFixed(1)}" fill="${color}" opacity=".8"/>`
+      : `<rect x="${x}" y="${H - 2}" width="${bw.toFixed(1)}" height="2" fill="var(--soft)"/>`; }).join("")
+    + (ty != null ? `<line x1="0" x2="${W}" y1="${ty.toFixed(1)}" y2="${ty.toFixed(1)}" stroke="var(--soft)" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>` : "") + `</svg>`;
+}
 const hmMin = s => { const [h, m] = String(s).split(":").map(Number); return h * 60 + m; };
 const minHm = m => `${Math.floor(m / 60)}:${pad(Math.round(m) % 60)}`;
 function renderMetrics() {
   if (!S.data) return;
   const tk = ymd(todayDate()), week = Array.from({ length: 7 }, (_, i) => addDaysK(tk, i - 6)), prev = week.map(k => addDaysK(k, -7)), out = [];
-  const metric = (c, k, r, v, sub, sp) => `<div class="metric" style="--c:${c}"><div class="m-h"><span class="k">${k}</span><span class="r">${r}</span></div><div class="m-v">${v}<small>${sub}</small></div>${sp}</div>`;
+  const metric = (c, k, r, v, sub, sp, note = "") => `<div class="metric" style="--c:${c}"><div class="m-h"><span class="k">${k}</span><span class="r">${r}</span></div><div class="m-v">${v}<small>${sub}</small></div>${note && `<p class="m-note">${note}</p>`}${sp}</div>`;
   // подъём ребёнка: медиана недели и сдвиг к прошлой
   const wake = ks => ks.map(k => S.data.kid[k]?.wake ? hmMin(S.data.kid[k].wake) : null);
   const w = wake(week), wv = w.filter(x => x != null), pv = wake(prev).filter(x => x != null);
   if (wv.length) {
     const m = median(wv), d = pv.length ? Math.round(m - median(pv)) : 0;
     const r = !pv.length || Math.abs(d) < 3 ? "как на прошлой неделе" : d < 0 ? `<em>▲</em> на ${-d} мин раньше` : `<em>▼</em> на ${d} мин позже`;
-    out.push(metric("var(--amber)", `Подъём ${esc(kidGen())}`, r, minHm(m), "медиана", spark(w, "var(--amber)")));
+    out.push(metric("var(--amber)", `Подъём ${esc(kidGen())}`, r, minHm(m), "обычно", spark(w, "var(--amber)")));
   }
-  // молитва: минут в день в среднем за неделю
-  const pr = week.map(prayMinutes), avg = Math.round(pr.reduce((a, x) => a + x, 0) / 7);
-  out.push(metric("var(--violet)", "Молитва", `цель <em>${prTarget()}</em> мин`, avg, "мин / день", spark(pr, "var(--violet)")));
+  // молитва: в сколько дней недели была и по сколько минут в эти дни. Сегодня, пока не молился, — не пропуск:
+  // тогда неделя — семь дней до вчера включительно
+  const pw = prayMinutes(tk) ? week : [prev[6], ...week.slice(0, 6)], pr = pw.map(prayMinutes), on = pr.filter(Boolean);
+  const per = on.length ? Math.round(on.reduce((a, x) => a + x, 0) / on.length) : 0;
+  out.push(metric("var(--violet)", "Молитва", `цель <em>${prTarget()}</em> мин`, `${on.length}<span class="of">из 7</span>`,
+    on.length ? `${plural(on.length, "день", "дня", "дней")} · по ${per} мин` : "дней пока нет", bars(pr, "var(--violet)", prTarget())));
   // сферы: сколько из ритмичных набрали норму, и куда перекос
   const rows = balance(tk).filter(r => !r.onDemand);
   if (rows.length) {
-    const ok = rows.filter(r => r.touched >= r.norm).length, over = rows.filter(r => r.touched > r.norm).sort((a, b) => b.touched / b.norm - a.touched / a.norm)[0];
+    // сколько сфер с ритмом набрали норму дней и каким ещё нужно время — самые отставшие первыми
+    const ok = rows.filter(r => r.touched >= r.norm).length, need = rows.filter(r => r.touched < r.norm).sort((a, b) => a.touched / a.norm - b.touched / b.norm);
     const perDay = week.map((k, j) => rows.filter(r => r.week[j].what).length);
-    out.push(metric("var(--teal)", "Сферы в норме", `из <em>${rows.length}</em>`, ok, over ? `перевес: ${esc(over.s)}` : "без перевеса", spark(perDay, "var(--teal)")));
+    out.push(metric("var(--teal)", "Сферы в норме", "за 7 дней", `${ok}<span class="of">из ${rows.length}</span>`,
+      "в норме", spark(perDay, "var(--teal)"), need.length ? `Ещё нужно время: <b>${esc(need.map(r => r.s).join(", "))}</b>` : "Все сферы набрали норму"));
   }
   setHtml($("#metric-list"), out.join(""));
   // обзор недели: серия подряд на шкале 12-недельного цикла
@@ -3400,13 +3414,13 @@ function renderHero() {
   // курс в градусах: сферы стоят по кругу через равные промежутки, север — 000°
   const at = H.sel >= 0 ? H.sel : ph === "prayer" || sunday ? -1 : focus;
   const deg = at < 0 ? 0 : Math.round(180 / rows.length + at * 360 / rows.length);
-  const why = H.sel >= 0 ? `смотрю: ${rows[H.sel].s}` : ph === "prayer" ? "на север: молитва" : sunday ? "день Господень" : focus >= 0 ? `упор: ${rows[focus].s}` : "курс ровный";
+  const why = H.sel >= 0 ? `смотрю: ${rows[H.sel].s}` : ph === "prayer" ? "на север: молитва" : sunday ? "воскресный день" : focus >= 0 ? `упор: ${rows[focus].s}` : "курс ровный";
   $("#hero-status").innerHTML = `<i class="dot"></i><b>Курс</b> ${String(deg).padStart(3, "0")}° · ${esc(why)}<span class="wide"> · <b>неделя</b> ${isoWeek(todayDate())}</span>`;
   const r = H.sel >= 0 ? rows[H.sel] : null, f = focus >= 0 ? rows[focus] : null, phase = $("#phase");
   let title = PHASE_T[ph], sub = "";
   if (r) { title = r.s; sub = `<b>${r.touched} из ${r.norm}</b> ${plural(r.norm, "день", "дня", "дней")} за неделю · ${esc(agoText(r))} · <button type="button" class="linkbtn" data-hero="back">к упору</button>`; }
   else if (ph === "prayer") sub = "Идёт молитва — стрелка смотрит на север";
-  else if (sunday) { title = "День Господень"; sub = `Без упора и без дел · <b>церковь, семья, покой</b> · <button type="button" class="linkbtn" data-hero="show">${H.show ? "спрятать дела" : "показать дела"}</button>`; }
+  else if (sunday) { title = "Воскресный день"; sub = `Без упора и без дел · <b>церковь, семья, покой</b> · <button type="button" class="linkbtn" data-hero="show">${H.show ? "спрятать дела" : "показать дела"}</button>`; }
   else if (f) sub = `Упор — <b>${esc(f.s)}</b>: ${f.touched} из ${f.norm} за неделю, ${esc(agoText(f))}`;
   else sub = rows.length ? "Все сферы в своей норме — курс ровный" : "Добавь сферы в настройках — компас покажет, куда держать курс";
   if (ph === "night" && !r && (sky.red || H.redOff)) sub += ` · <button type="button" class="linkbtn" data-hero="red">${H.redOff ? "красный свет" : "обычный свет"}</button>`;

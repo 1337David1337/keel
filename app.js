@@ -2223,7 +2223,7 @@ function sphereActivity(from, to, routine) {
 }
 // Норма внимания — сколько дней в неделю сфере нужно время; своя норма хранится в settings.sphereNorms.
 // 0 — сфера «по делу»: ей не нужно время по ритму (здоровье, когда никто не болеет; дом, когда ничего не сломалось),
-// она без заряда и попадает в «Упор» только при настоящем деле — задаче со сроком или шаге цели
+// она без заряда и попадает в «Фокус» только при настоящем деле — задаче со сроком или шаге цели
 const NORM_DEFAULT = { "жена": 5, "ребенок": 6, "семья": 5, "церковь": 3, "работа": 3, "рост": 3, "деньги": 3, "здоровье": 0, "дом": 0, "родные": 0, "машина": 0 };
 // рядом с «ростом» работа — сфера «когда нужно»: рабочие часы и так заняты работой
 const normOf = s => settings().sphereNorms?.[s] ?? (canonOf(s) === "работа" && sphereByCanon("рост") ? 0 : NORM_DEFAULT[canonOf(s)] ?? 2);
@@ -2249,7 +2249,9 @@ function sphereIdeas(s, tgtK) {
   if (T.data) {
     const pr = x => { const d = effDue(x); return !d ? 2 : d <= tgtK ? 0 : 1; }, roots = new Set();
     // от задачи с подзадачами — только ближайшая подзадача: это и есть следующее действие
-    T.data.tasks.filter(x => actionable(x) && !parked(x) && taskSphere(x) === s && (!effDue(x) || effDue(x) <= addDaysK(tgtK, 7)))
+    // задачи, которые и так стоят в «Задачах» на сегодня (просроченные, со сроком сегодня и подзадачи под ними), не повторяем
+    const tk = ymd(todayDate()), listed = x => (x.due && x.due <= tk) || (!x.due && parentOf(x)?.due && parentOf(x).due <= tk);
+    T.data.tasks.filter(x => actionable(x) && !parked(x) && !listed(x) && taskSphere(x) === s && (!effDue(x) || effDue(x) <= addDaysK(tgtK, 7)))
       .sort((a, b) => pr(a) - pr(b) || ((effDue(a) || "") < (effDue(b) || "") ? -1 : (effDue(a) || "") > (effDue(b) || "") ? 1 : byPos(a, b)))
       .filter(x => { const r = x.parent || x.id; return !roots.has(r) && roots.add(r); }).slice(0, 3)
       .forEach(x => out.push({ t: x.title, from: "task", src: taskSrc(x), taskId: x.id, listId: x.listId, due: effDue(x) }));
@@ -2752,7 +2754,7 @@ function wizFocus() {
   stepCatalog().forEach(c => cands.push({ t: c.text, src: c.gt, goal: c.goal, stepId: c.stepId || null, kind: "Шаги целей" }));
   if (T.data) {
     const pr = x => { const d = effDue(x); return !d ? 3 : d < tgt ? 0 : d === tgt ? 1 : 2; };
-    // то, что уже предложено в «Упоре», второй раз не показываем
+    // то, что уже предложено в «Фокусе», второй раз не показываем
     const picked = T.data.tasks.filter(x => actionable(x) && !parked(x) && !cands.some(c => c.taskId === x.id) && (!effDue(x) || effDue(x) <= addDaysK(tgt, 3)))
       .sort((a, b) => pr(a) - pr(b) || byPos(a, b)).slice(0, 12);
     // подзадачи одной задачи — подряд, под её названием
@@ -3085,7 +3087,7 @@ function verseOf(k) {
   const n = Math.round((parse(k) - new Date(2026, 0, 1)) / 864e5);
   return list[((n % list.length) + list.length) % list.length];
 }
-// В воскресенье — свой стих: воскресный день без упора и без дел
+// В воскресенье — свой стих: воскресный день без фокуса и без дел
 const SUNDAY_VERSE = { r: "Псалом 117:24", t: "Сей день сотворил Господь: возрадуемся и возвеселимся в оный!", a: "Церковь, семья и покой — дела подождут до понедельника." };
 // Текст проявляется, как расшифровка сигнала: буквы перебираются и встают на место слева направо
 function scramble(el, text, dur = 1600) {
@@ -3414,14 +3416,14 @@ function renderHero() {
   // курс в градусах: сферы стоят по кругу через равные промежутки, север — 000°
   const at = H.sel >= 0 ? H.sel : ph === "prayer" || sunday ? -1 : focus;
   const deg = at < 0 ? 0 : Math.round(180 / rows.length + at * 360 / rows.length);
-  const why = H.sel >= 0 ? `смотрю: ${rows[H.sel].s}` : ph === "prayer" ? "на север: молитва" : sunday ? "воскресный день" : focus >= 0 ? `упор: ${rows[focus].s}` : "курс ровный";
+  const why = H.sel >= 0 ? `смотрю: ${rows[H.sel].s}` : ph === "prayer" ? "на север: молитва" : sunday ? "воскресный день" : focus >= 0 ? `фокус: ${rows[focus].s}` : "курс ровный";
   $("#hero-status").innerHTML = `<i class="dot"></i><b>Курс</b> ${String(deg).padStart(3, "0")}° · ${esc(why)}<span class="wide"> · <b>неделя</b> ${isoWeek(todayDate())}</span>`;
   const r = H.sel >= 0 ? rows[H.sel] : null, f = focus >= 0 ? rows[focus] : null, phase = $("#phase");
   let title = PHASE_T[ph], sub = "";
-  if (r) { title = r.s; sub = `<b>${r.touched} из ${r.norm}</b> ${plural(r.norm, "день", "дня", "дней")} за неделю · ${esc(agoText(r))} · <button type="button" class="linkbtn" data-hero="back">к упору</button>`; }
+  if (r) { title = r.s; sub = `<b>${r.touched} из ${r.norm}</b> ${plural(r.norm, "день", "дня", "дней")} за неделю · ${esc(agoText(r))} · <button type="button" class="linkbtn" data-hero="back">к фокусу</button>`; }
   else if (ph === "prayer") sub = "Идёт молитва — стрелка смотрит на север";
-  else if (sunday) { title = "Воскресный день"; sub = `Без упора и без дел · <b>церковь, семья, покой</b> · <button type="button" class="linkbtn" data-hero="show">${H.show ? "спрятать дела" : "показать дела"}</button>`; }
-  else if (f) sub = `Упор — <b>${esc(f.s)}</b>: ${f.touched} из ${f.norm} за неделю, ${esc(agoText(f))}`;
+  else if (sunday) { title = "Воскресный день"; sub = `Без фокуса и без дел · <b>церковь, семья, покой</b> · <button type="button" class="linkbtn" data-hero="show">${H.show ? "спрятать дела" : "показать дела"}</button>`; }
+  else if (f) sub = `Фокус — <b>${esc(f.s)}</b>: ${f.touched} из ${f.norm} за неделю, ${esc(agoText(f))}`;
   else sub = rows.length ? "Все сферы в своей норме — курс ровный" : "Добавь сферы в настройках — компас покажет, куда держать курс";
   if (ph === "night" && !r && (sky.red || H.redOff)) sub += ` · <button type="button" class="linkbtn" data-hero="red">${H.redOff ? "красный свет" : "обычный свет"}</button>`;
   phase.textContent = title; phase.classList.toggle("long", title.length > 9);

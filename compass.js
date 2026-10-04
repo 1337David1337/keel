@@ -1,4 +1,4 @@
-// Компас «Стези» на вкладке «Сегодня»: частицы, шкала, дуги сфер и стрелка на упор.
+// Компас «Стези» на вкладке «Сегодня»: частицы, шкала, дуги сфер и стрелка на фокус.
 // Данные даёт app.js через Compass.set(); сам компас ничего не считает и ничего не сохраняет
 (function () {
   "use strict";
@@ -262,7 +262,7 @@
 
   function hit(e) {
     const r = cv.getBoundingClientRect(), x = e.clientX - r.left - cx, y = e.clientY - r.top - cy, d = Math.hypot(x, y);
-    if (d < R * .2) return -2; // центр — назад к упору
+    if (d < R * .2) return -2; // центр — назад к фокусу
     if (d < R * .6 || d > R * 1.45 || !S.spheres.length) return -1;
     const ang = Math.atan2(y, x); let best = -1, bd = TAU / S.spheres.length / 2;
     S.spheres.forEach((s, i) => { const dd = Math.abs(((ang - sphTh(i) + Math.PI) % TAU + TAU) % TAU - Math.PI); if (dd < bd) { bd = dd; best = i; } });
@@ -283,7 +283,7 @@
     document.fonts && document.fonts.ready.then(() => (reduce ? still() : wake()));
   }
 
-  // spheres: [{ n, v, sub }]; focus/sel — индекс сферы или -1; log — индексы упора по дням; north — стрелка на север
+  // spheres: [{ n, v, sub }]; focus/sel — индекс сферы или -1; log — индексы фокуса по дням; north — стрелка на север
   function set(d) {
     const key = s => s.map(x => x.n + ":" + x.v).join("|"), rebuild = d.spheres && key(d.spheres) !== key(S.spheres);
     Object.assign(S, d);

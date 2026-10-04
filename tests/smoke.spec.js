@@ -38,7 +38,7 @@ test("отметка привычки сохраняется в GitHub", async (
   await expect.poll(() => puts.at(-1)?.log?.[TODAY]?.read).toBe(true);
 });
 
-test("упор: нажатие добавляет дело в главное, повторное — убирает", async ({ page }) => {
+test("фокус: нажатие добавляет дело в главное, повторное — убирает", async ({ page }) => {
   const { puts } = await open(page);
   const pick = page.locator("#bal-rec button.pi").first();
   const title = (await pick.locator("span").first().evaluate(el => el.firstChild.textContent)).trim();
@@ -194,7 +194,7 @@ test("календарь подъёмов: свой подъём виден и �
   await expect(page.locator('#kcal .kc-c.me[data-tip*="ты встал в 6:50"]')).toHaveCount(1);
 });
 
-test("баланс: сфера «по делу» без дел не подсвечивается и не лезет в упор", async ({ page }) => {
+test("баланс: сфера «по делу» без дел не подсвечивается и не лезет в фокус", async ({ page }) => {
   await open(page);
   await expect(page.locator("#bal-batts")).not.toContainText("здоровье");
   await expect(page.locator("#bal-rec")).not.toContainText("здоровье", { ignoreCase: true });
@@ -271,7 +271,7 @@ test("вид по солнцу: днём — карта, после заката
   expect(errors).toEqual([]);
 });
 
-test("воскресенье: «Воскресный день» без упора и дел, дела — по кнопке", async ({ page }) => {
+test("воскресенье: «Воскресный день» без фокуса и дел, дела — по кнопке", async ({ page }) => {
   const { errors } = await open(page);
   await page.clock.setFixedTime("2026-10-04T12:00:00+03:00");
   await page.reload();
@@ -282,4 +282,16 @@ test("воскресенье: «Воскресный день» без упор�
   await page.locator('#hero [data-hero="show"]').click();
   await expect(page.locator("#focus-card")).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("фокус не предлагает задачи, которые уже есть в «Задачах» на сегодня", async ({ page }) => {
+  await open(page);
+  const more = page.locator("#bal-rec [data-bmore]");
+  if (await more.count()) await more.click();
+  const seen = new Set();
+  for (const alt of await page.locator("#bal-rec [data-balt]").all())
+    for (let i = 0; i < 4; i++) { (await page.locator("#bal-rec button.pi").allInnerTexts()).forEach(t => seen.add(t)); await alt.click(); }
+  (await page.locator("#bal-rec button.pi").allInnerTexts()).forEach(t => seen.add(t));
+  const all = [...seen].join("\n");
+  for (const t of ["Подготовить машину к зиме", "Записаться на шиномонтаж", "Покрасить стену"]) expect(all).not.toContain(t);
 });

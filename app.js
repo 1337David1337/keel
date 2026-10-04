@@ -694,17 +694,20 @@ function render() {
   renderRitualCard(); renderSlotCard(); renderFocus(); renderBalance(); renderSlotPlan(); renderFocusTime();
   renderMonth();
   renderPrayCard(); renderDuoCard(); renderVerse(); renderPrayStats(); renderPraySettings(); renderNeeds(); renderRemind();
+  renderHero();
 }
 function renderHeader() {
   const t = todayDate(), tk = ymd(t), v = currentView();
-  $("#today-title").textContent = v === "today" ? fmtLong.format(t) : VIEW_TITLES[v];
+  $("#today-title").textContent = v === "today" ? "Стезя" : VIEW_TITLES[v];
+  $("#tagline").hidden = v !== "today";
   $("#period-line").textContent = v === "today"
-    ? `${MONTHS[t.getMonth()]} · ${Math.floor(t.getMonth() / 3) + 1}-й квартал · неделя ${isoWeek(t)}`
+    ? `Неделя ${isoWeek(t)} · ${Math.floor(t.getMonth() / 3) + 1}-й квартал`
     : fmtLong.format(t);
-  const sum = $("#today-sum");
-  sum.hidden = v !== "today";
-  if (!S.cfg && !S.data) { sum.textContent = "Подключи репозиторий с данными, чтобы открыть Keel."; return; }
-  if (!S.data) { sum.textContent = "Загружаю данные с GitHub…"; return; }
+  // без данных сообщение — в шапке; с данными сводка дня живёт под компасом
+  const top = $("#today-sum"), sum = $("#hero-sum");
+  top.hidden = !!S.data || v !== "today";
+  if (!S.cfg && !S.data) { top.textContent = "Подключи репозиторий с данными, чтобы открыть Стезю."; return; }
+  if (!S.data) { top.textContent = "Загружаю данные с GitHub…"; return; }
   const hs = active();
   if (!hs.length) { sum.textContent = "Привычек пока нет. Добавь первую в настройках."; return; }
   const doneToday = hs.filter(h => isDone(tk, h.id)).length, fc = S.data.focus[tk] || [];
@@ -1419,6 +1422,7 @@ function route() {
   const v = currentView();
   document.querySelectorAll(".view[data-view]").forEach(el => { el.hidden = el.dataset.view !== v; });
   render();
+  window.Compass?.wake();
 }
 function openConnect() {
   $("#connect-panel").open = true;
@@ -2274,7 +2278,7 @@ function sphereIdeas(s, tgtK) {
 }
 // Какие сферы поднять в день tgtK: те, кому по норме уже пора, — сильнее всех отставшие первыми
 // Откуда предложение: задача Google, шаг цели, привычка или подсказка самого дашборда (её нет нигде)
-const FROM = { task: "Google Задачи", goal: "Шаг цели", habit: "Привычка", idea: "Подсказка Keel" };
+const FROM = { task: "Google Задачи", goal: "Шаг цели", habit: "Привычка", idea: "Подсказка Стези" };
 const fromLine = x => [FROM[x.from], x.src].filter(Boolean).join(" · ");
 const focusSrc = (x, s) => x.from === "task" ? x.src : `${FROM[x.from]} · ${s}`;
 function balanceRecs(tgtK, rows) {
@@ -2305,7 +2309,7 @@ function weekState(r) {
 }
 // innerHTML — только когда что-то поменялось: анимация идёт на новые данные, а не на каждую перерисовку
 const setHtml = (el, html) => { if (el._h !== html) { el._h = html; el.innerHTML = html; } };
-// Кольцо сферы на «Сегодня»: замкнулось — дней хватает. Янтарное — только у сфер, которым Keel советует время сейчас
+// Кольцо сферы на «Сегодня»: замкнулось — дней хватает. Янтарное — только у сфер, которым Стезя советует время сейчас
 const RING_C = (2 * Math.PI * 15).toFixed(1);
 function ringHtml(r, hot) {
   const p = Math.min(1, r.touched / r.norm), cls = r.touched >= r.norm ? "ok" : hot ? "hot" : "";
@@ -2371,7 +2375,7 @@ function balDetail(i, j) {
   $("#bl-list").querySelectorAll(".bg-c.sel").forEach(c => c.classList.remove("sel"));
   $(`#bl-list [data-bg="${i}:${j}"]`)?.classList.add("sel");
   const what = d.what ? cellText(d) : `ничего не засчиталось${d.rut ? ` (рутина: ${[...new Set(d.rut)].join(", ")})` : ""}`;
-  const tail = r.onDemand ? "Сфера без ритма: Keel предложит её, когда есть дело со сроком."
+  const tail = r.onDemand ? "Сфера без ритма: Стезя предложит её, когда есть дело со сроком."
     : r.touched ? `За неделю ${r.touched} из ${r.norm}.` : `За неделю ни разу${r.last ? `, последний раз ${dayLabel(r.last)}` : ""}. Нужно ${dayWord(r.norm)} в неделю.`;
   $("#bl-detail").innerHTML = `<b>${esc(capF(r.s))}, ${dayLabel(d.k)}:</b> ${esc(what)}. ${tail}`;
 }
@@ -3102,24 +3106,42 @@ function verseOf(k) {
   const n = Math.round((parse(k) - new Date(2026, 0, 1)) / 864e5);
   return list[((n % list.length) + list.length) % list.length];
 }
+// В воскресенье — свой стих: день Господень без упора и без дел
+const SUNDAY_VERSE = { r: "Псалом 117:24", t: "Сей день сотворил Господь: возрадуемся и возвеселимся в оный!", a: "Церковь, семья и покой — дела подождут до понедельника." };
+// Текст проявляется, как расшифровка сигнала: буквы перебираются и встают на место слева направо
+function scramble(el, text, dur = 1600) {
+  const A = "АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ0123456789·:/", t0 = performance.now();
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = text; return; }
+  const step = now => {
+    const k = Math.min((now - t0) / dur, 1), n = Math.floor(text.length * k), tail = Math.min(12, text.length - n);
+    el.textContent = text.slice(0, n) + Array.from({ length: tail }, () => A[Math.random() * A.length | 0]).join("");
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
 function renderVerse() {
-  const card = $("#verse-card"), tk = ymd(todayDate()), v = S.data && verseOf(tk);
+  const card = $("#verse-card"), tk = ymd(todayDate()), sunday = new Date().getDay() === 0, v = S.data && (sunday ? SUNDAY_VERSE : verseOf(tk));
   card.hidden = !v;
   if (!v) return;
-  const key = `${tk}|${kidName()}`;
-  if (card.dataset.key === key) return; // не перерисовываем — иначе анимация начнётся заново
+  const key = `${tk}|${kidName()}|${sunday}`;
+  if (card.dataset.key === key) return; // не перерисовываем — иначе расшифровка начнётся заново
   card.dataset.key = key;
   let seen = null;
   try { seen = localStorage.getItem("keel.verseSeen"); } catch {}
   const rise = seen !== tk && !card.dataset.shown;
-  const words = v.t.split(" ");
   const act = v.a.replace(/\{kidGen\}/g, kidGen()).replace(/\{kid\}/g, kidName());
   card.classList.toggle("rise", rise);
-  card.style.setProperty("--after", `${words.length * 70 + 450}ms`);
-  card.innerHTML = `<span class="v-eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M4.9 6.9l2.1 2.1M19.1 6.9 17 9M2 16h20M6 16a6 6 0 0 1 12 0"/></svg>Стих дня</span>
-    <blockquote>${words.map((w, i) => `<span class="w" style="--i:${i}">${esc(w)}</span>`).join(" ")}</blockquote>
+  card.innerHTML = `<span class="v-eye">Стих дня</span>
+    <blockquote>${rise ? "&nbsp;" : esc(v.t)}</blockquote>
     <cite>${esc(v.r)}</cite>
     <div class="v-act"><p><span>Сегодня:</span> ${esc(act)}</p></div>`;
+  // раз в день стих расшифровывается, когда карточка впервые попадает на экран
+  if (rise) {
+    const q = card.querySelector("blockquote"), io = new IntersectionObserver(es => {
+      if (es[0].isIntersecting) { io.disconnect(); scramble(q, v.t); }
+    });
+    io.observe(card);
+  }
   card.dataset.shown = "1";
   if (rise) try { localStorage.setItem("keel.verseSeen", tk); } catch {}
 }
@@ -3309,19 +3331,95 @@ $("#need-list").addEventListener("submit", e => {
   toast(`Ответ записан: ${fmtShort.format(parse(date))}`, () => op({ t: "need", id, data: { answered: null, note: "" } }));
 });
 
+/* ---------- курс дня: компас на «Сегодня» ---------- */
+// sel — сфера, которую открыли тапом по компасу; show — в воскресенье всё-таки показать дела; redOff — обычный свет до перезагрузки
+const H = { sel: -1, show: false, redOff: false };
+const PHASE_T = { morning: "Утро", day: "День", evening: "Вечер", night: "Ночь", prayer: "Молитва" };
+const KEEP = ["жена", "ребенок", "семья", "церковь"]; // в воскресенье на компасе ярко только семья и церковь
+function phaseNow(now = new Date()) {
+  const h = now.getHours();
+  return prRun() ? "prayer" : h >= 22 || h < 5 ? "night" : h < 11 ? "morning" : h < 18 ? "day" : "evening";
+}
+const lordsDay = (now = new Date()) => now.getDay() === 0 && ["morning", "day", "evening"].includes(phaseNow(now));
+// Журнал курса: на какую сферу смотрела стрелка утром каждого из прошлых шести дней —
+// на ту, которой по норме дольше всех не было времени (−1 — все в норме, стрелка на севере)
+function courseLog(rows) {
+  const tk = ymd(todayDate()), act = sphereActivity(addDaysK(tk, -40), tk);
+  const keys = rows.map(r => Object.keys(act[r.s] || {}).sort());
+  return Array.from({ length: 6 }, (_, i) => {
+    const k = addDaysK(tk, i - 6);
+    let best = -1, top = 0;
+    rows.forEach((r, j) => {
+      const prev = keys[j].filter(x => x < k).pop(), need = (prev ? Math.round((parse(k) - parse(prev)) / 864e5) : 30) / r.gap;
+      if (need >= 1 && need > top) { top = need; best = j; }
+    });
+    return best;
+  });
+}
+function renderHero() {
+  if (!S.data || !window.Compass) return;
+  const now = new Date(), tk = ymd(todayDate()), all = balance(tk), rows = all.filter(r => !r.onDemand);
+  const ph = phaseNow(now), sunday = lordsDay(now), sky = window.Sky.apply({ theme: themeChoice(), red: redOn() && !H.redOff });
+  const focusS = sunday ? null : balanceRecs(tk, all).find(r => !r.onDemand)?.s, focus = rows.findIndex(r => r.s === focusS);
+  if (H.sel >= rows.length) H.sel = -1;
+  document.body.classList.toggle("sunday", sunday && !H.show);
+  Compass.set({
+    spheres: rows.map(r => ({ n: r.s, v: r.touched / r.norm, sub: `${r.touched} из ${r.norm}` })),
+    focus, sel: H.sel, north: ph === "prayer" || sunday, quiet: sunday,
+    keep: rows.map((r, i) => KEEP.includes(canonOf(r.s)) ? i : -1).filter(i => i >= 0),
+    log: rows.length ? [...courseLog(rows), focus] : [],
+    days: Array.from({ length: 7 }, (_, i) => DOW[dow(addDays(todayDate(), i - 6))].toUpperCase()),
+    light: sky.light, phase: ph, sun: sky.sun,
+  });
+  // курс в градусах: сферы стоят по кругу через равные промежутки, север — 000°
+  const at = H.sel >= 0 ? H.sel : ph === "prayer" || sunday ? -1 : focus;
+  const deg = at < 0 ? 0 : Math.round(180 / rows.length + at * 360 / rows.length);
+  const why = H.sel >= 0 ? `смотрю: ${rows[H.sel].s}` : ph === "prayer" ? "на север: молитва" : sunday ? "день Господень" : focus >= 0 ? `упор: ${rows[focus].s}` : "курс ровный";
+  $("#hero-status").innerHTML = `<i class="dot"></i><b>Курс</b> ${String(deg).padStart(3, "0")}° · ${esc(why)}<span class="wide"> · <b>неделя</b> ${isoWeek(todayDate())}</span>`;
+  const r = H.sel >= 0 ? rows[H.sel] : null, f = focus >= 0 ? rows[focus] : null, phase = $("#phase");
+  let title = PHASE_T[ph], sub = "";
+  if (r) { title = r.s; sub = `<b>${r.touched} из ${r.norm}</b> ${plural(r.norm, "день", "дня", "дней")} за неделю · ${esc(agoText(r))} · <button type="button" class="linkbtn" data-hero="back">к упору</button>`; }
+  else if (ph === "prayer") sub = "Идёт молитва — стрелка смотрит на север";
+  else if (sunday) { title = "День Господень"; sub = `Без упора и без дел · <b>церковь, семья, покой</b> · <button type="button" class="linkbtn" data-hero="show">${H.show ? "спрятать дела" : "показать дела"}</button>`; }
+  else if (f) sub = `Упор — <b>${esc(f.s)}</b>: ${f.touched} из ${f.norm} за неделю, ${esc(agoText(f))}`;
+  else sub = rows.length ? "Все сферы в своей норме — курс ровный" : "Добавь сферы в настройках — компас покажет, куда держать курс";
+  if (ph === "night" && !r && (sky.red || H.redOff)) sub += ` · <button type="button" class="linkbtn" data-hero="red">${H.redOff ? "красный свет" : "обычный свет"}</button>`;
+  phase.textContent = title; phase.classList.toggle("long", title.length > 9);
+  $("#phase-sub").innerHTML = sub;
+}
+Compass.mount($("#compass"), $("#stars"), i => { H.sel = i; renderHero(); });
+$("#hero").addEventListener("click", e => {
+  const b = e.target.closest("[data-hero]"); if (!b) return;
+  if (b.dataset.hero === "back") H.sel = -1;
+  if (b.dataset.hero === "show") H.show = !H.show;
+  if (b.dataset.hero === "red") H.redOff = !H.redOff;
+  renderHero();
+});
+// Часы с секундами, дата и восход с закатом над Минском
+const CLK_DOW = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"], CLK_MON = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+function tickClock() {
+  const d = new Date(), st = window.Sky.times(d), hm = x => x ? `${x.getHours()}:${pad(x.getMinutes())}` : "—";
+  $("#clk").innerHTML = `${pad(d.getHours())}:${pad(d.getMinutes())}<small>:${pad(d.getSeconds())}</small>`;
+  $("#clk-d").textContent = `${CLK_DOW[d.getDay()]} · ${d.getDate()} ${CLK_MON[d.getMonth()]}`;
+  $("#sun-t").textContent = `восход ${hm(st.rise)} · закат ${hm(st.set)}`;
+}
+tickClock(); setInterval(tickClock, 1000);
+
 /* ---------- тема ---------- */
 function themeChoice() { try { const t = store.getItem("habits.theme"); return t === "light" || t === "dark" ? t : "auto"; } catch { return "auto"; } }
+// «По солнцу»: днём — морская карта, после заката — тёмный HUD (солнце над Минском считает sky.js)
+function redOn() { try { return store.getItem("habits.red") !== "off"; } catch { return true; } }
 function applyTheme(t) {
-  if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
   try { t === "auto" ? store.removeItem("habits.theme") : store.setItem("habits.theme", t); } catch {}
-  const dark = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.querySelectorAll('meta[name="theme-color"]').forEach(m => { m.content = dark ? "#0F1216" : "#EEF1F4"; });
   document.querySelectorAll("#theme-seg button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.themeOpt === t)));
-  $("#theme-note").textContent = t === "auto" ? "Как в системе телефона или компьютера." : t === "dark" ? "Всегда тёмная — удобно ночью." : "Всегда светлая.";
-  if (S.data) { renderKid(); renderGoals(); renderProgress(); }
+  const st = window.Sky?.times(new Date()), hm = d => d ? fmtTime.format(d) : "—";
+  $("#theme-note").textContent = t === "auto" ? `Днём — морская карта, после заката — тёмная. Сегодня светло с ${hm(st?.rise)} до ${hm(st?.set)}.`
+    : t === "dark" ? "Всегда тёмная." : "Всегда светлая — морская карта.";
+  $("#red-on").checked = redOn();
+  if (S.data) { renderHero(); renderKid(); renderGoals(); renderProgress(); } else window.Sky?.apply({ theme: t, red: redOn() });
 }
 document.querySelectorAll("#theme-seg button").forEach(b => b.addEventListener("click", () => applyTheme(b.dataset.themeOpt)));
-matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { if (themeChoice() === "auto") applyTheme("auto"); });
+$("#red-on").addEventListener("change", e => { try { e.target.checked ? store.removeItem("habits.red") : store.setItem("habits.red", "off"); } catch {} applyTheme(themeChoice()); });
 
 /* ---------- подсказки ---------- */
 const tip = $("#tip");
@@ -3343,7 +3441,8 @@ setInterval(() => {
   // Раз в минуту: смена дня и полдень (после 12:00 прогноз переключается на завтра)
   const now = new Date(), key = ymd(todayDate()) + (now.getHours() < 12 ? "am" : "pm");
   if (key !== lastKey) { lastKey = key; S.memo = null; render(); }
-  else if (S.data) { renderKid(); renderPlan(); renderSlotCard(); renderRitualCard(); renderDuoCard(); renderNow(); }
+  else if (S.data) { renderKid(); renderPlan(); renderSlotCard(); renderRitualCard(); renderDuoCard(); renderNow(); renderHero(); }
+  else window.Sky?.apply({ theme: themeChoice(), red: redOn() });
 }, 60000);
 let lastW = innerWidth;
 addEventListener("resize", () => {
@@ -3400,7 +3499,7 @@ async function rmEnable() {
        { t: "settings", data: { tz: Intl.DateTimeFormat().resolvedOptions().timeZone, reminders: rmSettings() } });
     toast("Напоминания включены на этом устройстве");
   } catch (e) {
-    notice(e.code === "denied" ? "Уведомления запрещены. Разреши их: Настройки iPhone → Уведомления → Keel — и нажми «Включить» ещё раз."
+    notice(e.code === "denied" ? "Уведомления запрещены. Разреши их: Настройки iPhone → Уведомления → Стезя — и нажми «Включить» ещё раз."
       : "Не удалось включить напоминания. Проверь связь и попробуй ещё раз.");
   }
   RM.busy = false; renderRemind();
@@ -3422,14 +3521,14 @@ function renderRemind() {
   let msg = "", btns = "";
   if (DEMO) msg = "В демо напоминания выключены.";
   else if (!pushSupported()) msg = isIOS && !standalone()
-    ? "На iPhone напоминания работают, когда Keel открыт с экрана «Домой»: в Safari нажми «Поделиться» → «На экран „Домой“», открой Keel с иконки и вернись сюда."
+    ? "На iPhone напоминания работают, когда Стезя открыта с экрана «Домой»: в Safari нажми «Поделиться» → «На экран „Домой“», открой Стезю с иконки и вернись сюда."
     : "Этот браузер не умеет присылать уведомления.";
-  else if (Notification.permission === "denied") msg = "Уведомления для Keel запрещены. Разреши их в настройках телефона: Уведомления → Keel.";
+  else if (Notification.permission === "denied") msg = "Уведомления для Стези запрещены. Разреши их в настройках телефона: Уведомления → Стезя.";
   else if (RM.sub) {
     msg = "Включены на этом устройстве. Если дело уже сделано — молитва записана, вечерние 5 минут пройдены, — напоминание не придёт.";
     btns = `<button type="button" class="btn ghost" id="rm-test">Показать пример</button><button type="button" class="btn ghost" id="rm-off">Выключить здесь</button>`;
   } else {
-    msg = "Keel напомнит об утренней молитве, вечерних 5 минутах, обзоре недели и свободном слоте.";
+    msg = "Стезя напомнит об утренней молитве, вечерних 5 минутах, обзоре недели и свободном слоте.";
     btns = `<button type="button" class="btn" id="rm-on" ${RM.busy ? "disabled" : ""}>${RM.busy ? "Включаю…" : "Включить на этом устройстве"}</button>`;
   }
   st.textContent = n ? `${n} ${plural(n, "устройство", "устройства", "устройств")}` : "";
@@ -3458,7 +3557,7 @@ $("#rm-form").addEventListener("change", e => {
 if (DEMO) {
   const bar = document.createElement("div");
   bar.className = "demo-bar";
-  bar.innerHTML = `<b>Демо Keel</b><span>Вымышленная семья. Можно нажимать всё — ничего не сохраняется.</span><a href="./">Выйти</a>`;
+  bar.innerHTML = `<b>Демо Стези</b><span>Вымышленная семья. Можно нажимать всё — ничего не сохраняется.</span><a href="./">Выйти</a>`;
   $("#notice").before(bar);
 }
 recompute();

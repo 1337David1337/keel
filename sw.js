@@ -1,12 +1,12 @@
-// Service worker Keel: показывает напоминания, которые присылает GitHub Actions
-// из репозитория с данными (.github/remind.mjs), и открывает Keel по нажатию.
+// Service worker Стези: показывает напоминания, которые присылает GitHub Actions
+// из репозитория с данными (.github/remind.mjs), и открывает Стезю по нажатию.
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
 
 self.addEventListener("push", e => {
   let m;
-  try { m = e.data.json(); } catch { m = { title: "Keel", body: e.data ? e.data.text() : "" }; }
-  e.waitUntil(self.registration.showNotification(m.title || "Keel", {
+  try { m = e.data.json(); } catch { m = { title: "Стезя", body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.registration.showNotification(m.title || "Стезя", {
     body: m.body || "", icon: "icon-192.png", badge: "icon-192.png", tag: m.key || "keel", data: { url: m.url || "./" },
   }));
 });

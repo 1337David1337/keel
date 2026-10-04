@@ -3,49 +3,66 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Keel</title>
+<title>Стезя</title>
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#EEF1F4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0F1216" media="(prefers-color-scheme: dark)">
-<script>
-  // Тема выбирается на каждом устройстве отдельно и применяется до отрисовки, без мигания
-  try { const t = localStorage.getItem("habits.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
-</script>
+<meta name="theme-color" content="#05070A">
+<!-- Вид выбирается до отрисовки, без мигания: днём — морская карта, после заката — тёмный HUD, ночью — красный свет -->
+<script src="sky.js?v=1"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Keel">
+<meta name="apple-mobile-web-app-title" content="Стезя">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=PT+Serif:ital@0;1&display=swap">
-<link rel="stylesheet" href="style.css?v=44">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Oswald:wght@400;500;600&family=PT+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="style.css?v=45">
 </head>
 <body>
+<div id="sky" aria-hidden="true"></div>
+<canvas id="stars" aria-hidden="true"></canvas>
 <aside class="side" aria-label="Разделы">
-  <div class="brand"><img src="icon.svg" alt="" width="28" height="28">Keel</div>
+  <div class="brand"><img src="icon.svg" alt="" width="28" height="28">Стезя</div>
   <nav class="side-nav" data-nav></nav>
 </aside>
 
 <div class="app">
   <header class="top">
     <div class="top-row">
-      <span class="eyebrow" id="period-line">Keel</span>
+      <span class="eyebrow" id="period-line">Стезя</span>
       <div class="top-r">
         <button type="button" class="sync" id="sync" title="Обновить с GitHub">не подключено</button>
         <a href="#settings" class="gear" aria-label="Настройки" title="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a>
       </div>
     </div>
-    <h1 id="today-title">Сегодня</h1>
-    <p class="lede" id="today-sum"></p>
+    <div class="top-main">
+      <div class="ttl">
+        <h1 id="today-title">Стезя</h1>
+        <p class="tagline" id="tagline">Он направит стези твои<small>Пр 3:6</small></p>
+      </div>
+      <div class="clock" aria-hidden="true">
+        <div class="clk-t" id="clk">--:--</div>
+        <div class="clk-d" id="clk-d"></div>
+        <div class="clk-s" id="sun-t"></div>
+      </div>
+    </div>
+    <p class="lede" id="today-sum" hidden></p>
   </header>
   <div class="notice" id="notice" role="status" hidden></div>
 
   <main id="main" hidden>
     <!-- ================= СЕГОДНЯ ================= -->
     <div class="view" data-view="today">
+      <section class="span2 hero" id="hero" aria-label="Курс дня">
+        <p class="status" id="hero-status"></p>
+        <canvas id="compass" aria-label="Компас: стрелка указывает на сферу, которой сейчас нужно время. Нажмите на сферу, чтобы посмотреть её."></canvas>
+        <h2 class="phase" id="phase">Сегодня</h2>
+        <p class="phase-sub" id="phase-sub"></p>
+        <p class="lede" id="hero-sum"></p>
+        <div class="hero-foot" id="hero-foot"></div>
+      </section>
       <section class="card span2 verse" id="verse-card" aria-label="Стих дня" hidden></section>
       <section class="span2">
         <div class="kid-actions">
@@ -218,7 +235,7 @@
         <div id="bl-care"></div>
         <p class="note">Сделанные задачи, шаги целей и время вдвоём отмечаются сами. Рутина — привычки с пометкой «рутина» — видна обводкой, но в счёт не идёт. Остальное отметь здесь или в «Вечерних 5 минутах».</p>
         <details class="bal-tags" id="bal-norms"><summary>Сколько дней в неделю нужно сфере</summary>
-          <p class="note">«Когда нужно» — для сфер без ритма, вроде здоровья и дома: на графике у них нет цели, а Keel предложит их, только когда есть дело со сроком или шаг цели.</p><ul></ul></details>
+          <p class="note">«Когда нужно» — для сфер без ритма, вроде здоровья и дома: на графике у них нет цели, а Стезя предложит их, только когда есть дело со сроком или шаг цели.</p><ul></ul></details>
         <details class="bal-tags" id="bal-lists" hidden><summary>Списки Google и сферы</summary>
           <p class="note">Задачи списка получают его сферу. «По словам» — сфера угадывается по названию задачи, «не предлагать» — для парковки вроде «Когда-нибудь»: такие задачи не попадут в рекомендации, пока не перенесёшь их в другой список.</p><ul></ul></details>
         <details class="bal-tags" id="bal-tags" hidden><summary>Сферы задач</summary><ul></ul></details>
@@ -415,13 +432,14 @@
     <div class="view" data-view="settings" hidden>
       <section class="card span2">
         <div class="theme-row">
-          <div><h2 class="h3" style="margin:0">Тема</h2><p id="theme-note">Как в системе телефона или компьютера.</p></div>
+          <div><h2 class="h3" style="margin:0">Тема</h2><p id="theme-note">Днём — морская карта, после заката — тёмная.</p></div>
           <div class="seg" role="tablist" aria-label="Тема" id="theme-seg">
-            <button type="button" role="tab" data-theme-opt="auto">Авто</button>
+            <button type="button" role="tab" data-theme-opt="auto">По солнцу</button>
             <button type="button" role="tab" data-theme-opt="light">Светлая</button>
             <button type="button" role="tab" data-theme-opt="dark">Тёмная</button>
           </div>
         </div>
+        <label class="rt red-opt"><input type="checkbox" id="red-on"> Ночью красный свет, с 22:00 до 5:00: не режет глаза и не разгоняет сон</label>
       </section>
       <section class="card span2" id="remind">
         <div class="card-h"><h2>Напоминания</h2><small id="rm-state"></small></div>
@@ -628,6 +646,7 @@
 <div class="tip" id="tip" hidden></div>
 <script src="demo-data.js?v=2"></script>
 <script src="verses.js?v=2"></script>
-<script src="app.js?v=52"></script>
+<script src="compass.js?v=1"></script>
+<script src="app.js?v=53"></script>
 </body>
 </html>

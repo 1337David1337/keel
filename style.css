@@ -1,55 +1,41 @@
-/* Стиль B «Мягкий»: карточки, скругления, цветные кнопки. Светлая и тёмная темы. */
+/* Стезя: днём — морская карта (data-look="chart"), после заката — тёмный HUD (data-look="hud"), ночью — красный свет (.red).
+   Вид выбирает sky.js по солнцу над Минском или настройка темы. Имена переменных прежние — их использует app.js */
 :root {
-  --bg:#EEF1F4; --card:#FFFFFF; --ink:#141A21; --soft:#4B5563; --faint:#6B7480; --line:#E6E9EE; --line2:#D6DBE2;
-  --field:#F4F6F8;
-  --teal:#0E7C6B; --teal-bg:#E1F3EF; --amber:#B8570F; --amber-bg:#FDEEDF; --blue:#35629A; --blue-bg:#E4ECF7;
-  --violet:#4E4691; --violet-bg:#EAE8F6; --pink:#B83B73; --pink-bg:#FBE6EF; --warn:#B42318; --warn-bg:#FDECEA;
-  --on-accent:#FFFFFF;
-  --s0:#EDF0F3; --s1:#CDEBE4; --s2:#8FD1C2; --s3:#3FA58E; --s4:#0E7C6B;
-  --k0:#EEF2F7; --k1:#D8E3F1; --k2:#A9C2E2; --k3:#6F95C6; --k4:#35629A;
-  --wake:#D06A12;
-  --shadow:0 1px 2px rgba(16,24,40,.04), 0 6px 20px rgba(16,24,40,.05);
-  --tip-bg:#141A21; --tip-ink:#F4F6F8;
-  --dawn-a:#FFF4E6; --dawn-b:#FBE7D3; --dawn-ink:#5A2E0E; --dawn-ref:#9A4A12; --dawn-glow:rgba(240,161,90,.45);
+  --bg:#05070A; --card:rgba(13,17,22,.82); --ink:#E9EDF2; --soft:#A3ACB7; --faint:#7D8793; --line:#1A2028; --line2:#2A323C;
+  --field:#10151B;
+  --teal:#3CC2A6; --teal-bg:rgba(60,194,166,.13); --amber:#F0A15A; --amber-bg:rgba(240,161,90,.12); --blue:#7FA8DA; --blue-bg:rgba(127,168,218,.12);
+  --violet:#A79BF0; --violet-bg:rgba(167,155,240,.12); --pink:#F07AAE; --pink-bg:rgba(240,122,174,.12); --warn:#FF8A7A; --warn-bg:rgba(255,138,122,.12);
+  --on-accent:#05070A; --on-ink:#05070A; --dock:rgba(7,9,12,.92);
+  --s0:#141A21; --s1:#173A33; --s2:#1F6456; --s3:#2E9A83; --s4:#3CC2A6;
+  --k0:#121820; --k1:#1E2E42; --k2:#2E4D72; --k3:#5A83B6; --k4:#8FB5E3;
+  --wake:#F0A15A;
+  --shadow:none;
+  --tip-bg:#E9EDF2; --tip-ink:#05070A;
+  --dawn-a:transparent; --dawn-b:transparent; --dawn-ink:var(--ink); --dawn-ref:var(--amber); --dawn-glow:rgba(240,161,90,.3);
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace; --disp:Oswald,"Arial Narrow",sans-serif; --serif:"PT Serif",Georgia,serif;
   /* имена, которые использует app.js */
   --pine:var(--teal); --pine-ink:var(--on-accent); --gold:var(--warn); --ink-soft:var(--soft);
   --surface:var(--card); --paper:var(--bg);
-  color-scheme:light;
+  color-scheme:dark;
 }
-/* Тёмная тема: по системе (если не выбрана светлая) или явно выбранная */
-@media (prefers-color-scheme:dark) { :root:not([data-theme="light"]) {
-  --bg:#0F1216; --card:#181C22; --ink:#E8ECF1; --soft:#A9B2BD; --faint:#858F9B; --line:#262C34; --line2:#333A44;
-  --field:#1F242B;
-  --teal:#3CC2A6; --teal-bg:#15302B; --amber:#F0A15A; --amber-bg:#33251A; --blue:#7FA8DA; --blue-bg:#1B2735;
-  --violet:#A79BF0; --violet-bg:#242038; --pink:#F07AAE; --pink-bg:#361B29; --warn:#FF8A7A; --warn-bg:#3A1F1C;
-  --on-accent:#0F1216;
-  --s0:#1F242B; --s1:#173A33; --s2:#1F6456; --s3:#2E9A83; --s4:#3CC2A6;
-  --k0:#1C2129; --k1:#1E2E42; --k2:#2E4D72; --k3:#5A83B6; --k4:#8FB5E3;
-  --wake:#F0A15A;
-  --shadow:0 1px 2px rgba(0,0,0,.3);
-  --tip-bg:#E8ECF1; --tip-ink:#0F1216;
-  --dawn-a:#2A1F17; --dawn-b:#1E1A1D; --dawn-ink:#F6E3CF; --dawn-ref:#F0A15A; --dawn-glow:rgba(240,161,90,.35);
-  color-scheme:dark;
-} }
-:root[data-theme="dark"] {
-  --bg:#0F1216; --card:#181C22; --ink:#E8ECF1; --soft:#A9B2BD; --faint:#858F9B; --line:#262C34; --line2:#333A44;
-  --field:#1F242B;
-  --teal:#3CC2A6; --teal-bg:#15302B; --amber:#F0A15A; --amber-bg:#33251A; --blue:#7FA8DA; --blue-bg:#1B2735;
-  --violet:#A79BF0; --violet-bg:#242038; --pink:#F07AAE; --pink-bg:#361B29; --warn:#FF8A7A; --warn-bg:#3A1F1C;
-  --on-accent:#0F1216;
-  --s0:#1F242B; --s1:#173A33; --s2:#1F6456; --s3:#2E9A83; --s4:#3CC2A6;
-  --k0:#1C2129; --k1:#1E2E42; --k2:#2E4D72; --k3:#5A83B6; --k4:#8FB5E3;
-  --wake:#F0A15A;
-  --shadow:0 1px 2px rgba(0,0,0,.3);
-  --tip-bg:#E8ECF1; --tip-ink:#0F1216;
-  --dawn-a:#2A1F17; --dawn-b:#1E1A1D; --dawn-ink:#F6E3CF; --dawn-ref:#F0A15A; --dawn-glow:rgba(240,161,90,.35);
-  color-scheme:dark;
+/* Морская карта: бумага, чернила, сетка широт и долгот */
+:root[data-look="chart"] {
+  --bg:#F2ECDF; --card:rgba(251,248,240,.88); --ink:#1F2B35; --soft:#4F5B64; --faint:#736F66; --line:#E2D9C7; --line2:#CDC2AB;
+  --field:#EAE3D3;
+  --teal:#0E7C6B; --teal-bg:rgba(14,124,107,.1); --amber:#B4560F; --amber-bg:rgba(180,86,15,.1); --blue:#35629A; --blue-bg:rgba(53,98,154,.1);
+  --violet:#4E4691; --violet-bg:rgba(78,70,145,.1); --pink:#B83B73; --pink-bg:rgba(184,59,115,.1); --warn:#B42318; --warn-bg:rgba(180,35,24,.08);
+  --on-accent:#FFFDF8; --on-ink:#F2ECDF; --dock:rgba(246,241,230,.94);
+  --s0:#E4DCCB; --s1:#CBE0D6; --s2:#8FC4B4; --s3:#3FA58E; --s4:#0E7C6B;
+  --k0:#E6E0D2; --k1:#D3DCE6; --k2:#A9C2E2; --k3:#6F95C6; --k4:#35629A;
+  --wake:#C2620F;
+  --tip-bg:#1F2B35; --tip-ink:#F2ECDF; --dawn-glow:rgba(180,86,15,.15);
+  color-scheme:light;
 }
 
 * { box-sizing:border-box; }
 html { -webkit-text-size-adjust:100%; }
-body { margin:0; background:var(--bg); color:var(--ink); font-family:Onest,system-ui,-apple-system,sans-serif;
-  font-size:15.5px; line-height:1.5; font-variant-numeric:tabular-nums;
+body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--mono);
+  font-size:14px; line-height:1.55; font-variant-numeric:tabular-nums;
   padding-top:env(safe-area-inset-top,0px); }
 h1,h2,h3 { margin:0; line-height:1.2; text-wrap:balance; }
 button, input, select, textarea { font:inherit; color:inherit; }
@@ -299,7 +285,7 @@ figcaption small { display:block; font-weight:400; font-size:13px; color:var(--f
 .chart { width:100%; min-height:40px; }
 .chart svg { display:block; max-width:100%; height:auto; overflow:visible; }
 .chart .grid { stroke:var(--line); stroke-width:1; }
-.chart .ax { font-family:Onest,sans-serif; font-size:10.5px; fill:var(--faint); }
+.chart .ax { font-family:var(--mono); font-size:10.5px; fill:var(--faint); }
 .chart .ax.hl { fill:var(--violet); font-weight:600; }
 .chart .bar { fill:var(--teal); }
 .chart .bar.cur { fill:var(--s2); }
@@ -901,3 +887,143 @@ ul.m-mom { list-style:none; margin:0 0 10px; padding:0; }
 .m-mom .t small { display:block; font-size:12px; color:var(--faint); }
 .m-mom .t em { display:block; font-style:normal; font-size:13px; color:var(--soft); }
 @media (min-width:960px) { .m-kpi { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+
+/* ================= Стезя: тёмный HUD и морская карта ================= */
+html { transition:filter .8s; }
+body { transition:background-color .8s, color .8s; }
+:root[data-look="chart"] body { background:
+  linear-gradient(rgba(31,43,53,.05) 1px, transparent 1px) 0 0 / 120px 120px,
+  linear-gradient(90deg, rgba(31,43,53,.05) 1px, transparent 1px) 0 0 / 120px 120px, var(--bg); }
+/* Ночью — красный свет: не режет глаза и не разгоняет сон */
+html.red { filter:grayscale(1) sepia(1) saturate(5) hue-rotate(-40deg) brightness(.58) contrast(1.05); }
+#sky { position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:radial-gradient(130% 70% at var(--sun-x,70%) 105%, rgba(240,140,70,calc(var(--glow,0) * .32)), transparent 65%),
+             radial-gradient(90% 50% at var(--sun-x,70%) 100%, rgba(150,110,190,calc(var(--glow,0) * .14)), transparent 70%); }
+#stars { position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+.app, .side { position:relative; z-index:1; }
+:focus-visible { outline:1px solid var(--ink); outline-offset:3px; }
+a { color:var(--teal); }
+
+/* шапка: имя, подпись-стих и часы */
+.top { padding:16px 2px 8px; gap:8px; }
+.eyebrow { font-size:10.5px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); }
+.top-main { display:flex; justify-content:space-between; align-items:flex-end; gap:14px; }
+.ttl { min-width:0; }
+.top h1 { font:500 clamp(30px,8.5vw,46px)/1 var(--disp); letter-spacing:.06em; text-transform:uppercase; margin:0; }
+.tagline { margin:8px 0 0; font-size:10.5px; line-height:1.5; letter-spacing:.2em; text-transform:uppercase; color:var(--soft); }
+.tagline small { margin-left:10px; color:var(--faint); letter-spacing:.12em; white-space:nowrap; }
+.clock { flex:none; text-align:right; }
+.clk-t { font:500 clamp(38px,11vw,66px)/1 var(--disp); letter-spacing:.02em; }
+.clk-t small { font-size:.52em; color:var(--soft); }
+.clk-d { margin-top:6px; font-size:10.5px; letter-spacing:.26em; text-transform:uppercase; color:var(--soft); }
+.clk-s { margin-top:3px; font-size:10px; letter-spacing:.1em; color:var(--faint); white-space:nowrap; }
+.lede { font-size:13px; }
+.sync, .gear { background:var(--card); box-shadow:none; border:1px solid var(--line2); }
+.sync { font-size:11px; letter-spacing:.04em; border-radius:6px; }
+.sync.ok, .sync.warn { border-color:transparent; }
+.gear { border-radius:8px; }
+
+/* курс дня: компас */
+.hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:2px 0 4px; }
+.hero .status { margin:0; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:4px 8px;
+  font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--soft); }
+.hero .status b { color:var(--ink); font-weight:600; }
+.hero .status .dot { width:5px; height:5px; border-radius:50%; background:var(--teal); box-shadow:0 0 8px var(--teal); }
+:root[data-look="chart"] .hero .status .dot { box-shadow:none; }
+#compass { display:block; width:100%; height:340px; margin-top:2px; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.phase { font:500 42px/1.05 var(--disp); letter-spacing:.26em; margin:2px 0 0 .26em; text-transform:uppercase; }
+.phase.long { font-size:28px; letter-spacing:.1em; margin-left:.1em; }
+.phase-sub { margin:10px 0 0; max-width:62ch; font-size:13px; line-height:1.55; color:var(--soft); }
+.phase-sub b { color:var(--ink); font-weight:600; }
+.hero .lede { margin:6px 0 0; font-size:12px; color:var(--faint); }
+.hero .lede b { color:var(--soft); }
+.hero-foot:empty { display:none; }
+.hero .linkbtn { color:var(--ink); font-weight:500; }
+/* кольца сфер заменил компас */
+#bal-batts { display:none !important; }
+/* в воскресенье — без «Главного», упора и задач (по кнопке «показать дела» вернутся) */
+.sunday #focus-card, .sunday section:has(> #plan-tasks), .sunday section:has(#plan-tasks) { display:none; }
+
+/* карточки: тонкая рамка вместо тени */
+.card, .goal, .glist > .empty, .glist > .note { background:var(--card); border:1px solid var(--line2); border-radius:8px; box-shadow:none; }
+.card-h h2, .sec-head h2, details.sub > summary, .bal-h, .h3 { font-family:var(--mono); font-size:11.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; }
+.sec-head h2 { font-size:12px; }
+.card-h small, .card-h .aside, .sec-head .aside { font-size:11px; letter-spacing:.06em; }
+.bal-h2 { font-size:13px; }
+figcaption { font-size:13px; }
+.tiles div, .w-stat div, .w-line, .keel-sides div, .bg-detail, .g-next, .nd-form, .night-row, .bal-ok, .bal-skew { border-radius:6px; }
+.tiles div { background:transparent; border:1px solid var(--line2); }
+
+/* крупные числа — узким шрифтом, как на приборах */
+.fc-big, .tg-big b, .big-stat b, .tiles b, .g-val b, .duo b, .w-stat b, .ml-main b, .pray-card .pc-live, .ring-t b, .pray-done, .pray-input {
+  font-family:var(--disp); font-weight:500; letter-spacing:.01em; }
+.tiles b { font-size:24px; }
+
+/* кнопки и поля */
+.btn { border-radius:6px; font-weight:600; font-size:13px; letter-spacing:.02em; }
+.btn.ghost { background:transparent; border:1px solid var(--line2); }
+.field { border-radius:6px; font-size:15px; }
+.seg { background:transparent; border:1px solid var(--line2); border-radius:8px; }
+.seg button { border-radius:5px; font-size:12.5px; }
+.seg button[aria-selected="true"] { background:var(--ink); color:var(--on-ink); box-shadow:none; }
+.nav button, .per-nav button { border-radius:6px; background:transparent; border:1px solid var(--line2); }
+.chip { border-radius:5px; font-size:11px; letter-spacing:.04em; }
+.days label { border-radius:6px; }
+
+/* кнопки сна */
+.kbtn { border-radius:8px; border:1px solid var(--line2); background:var(--card); }
+.kbtn.kid { border-color:color-mix(in srgb, var(--amber) 45%, transparent); background:var(--amber-bg); }
+.kbtn.sleep { border-color:color-mix(in srgb, var(--blue) 45%, transparent); background:var(--blue-bg); }
+.kbtn.night { border-color:color-mix(in srgb, var(--violet) 45%, transparent); background:var(--violet-bg); }
+.kbtn.me { border-color:color-mix(in srgb, var(--teal) 45%, transparent); background:var(--teal-bg); }
+.kbtn b { font-size:14px; }
+.kgo { border-radius:5px; background:transparent; border:1px solid currentColor; font-size:11px; letter-spacing:.06em; }
+.chip-done { border-radius:6px; background:var(--card); border:1px solid var(--line2); box-shadow:none; }
+
+/* карточки «Сейчас» */
+.ritual, .pray-card, .slot-card, .duo { border-radius:8px; }
+.ritual .r-ic, .duo-card .r-ic { border-radius:8px; }
+.slot-card h3 { font-size:17px; }
+
+/* текст в списках чуть мельче — моноширинный шрифт шире */
+.hab-name, .pt-t, .focus .ft, .tl b, .nd-t, .g-steps li, .tg-list li, ul.checks li, .hb-top { font-size:14px; }
+.hab-meta, .pt-t small, .focus .ft small, .nd-meta { font-size:12px; }
+.tick, .pt button { border-radius:5px; }
+.focus button.fk { border-radius:4px; }
+
+/* стих дня — как сигнал, который расшифровывается */
+.verse { background:var(--card); border:1px solid var(--line2); text-align:center; padding:18px 18px 16px; }
+.verse .v-eye { justify-content:center; font-size:10.5px; font-weight:600; letter-spacing:.24em; color:var(--soft); }
+.verse blockquote { margin:12px auto 6px; max-width:60ch; font-family:var(--mono); font-size:15px; line-height:1.65; color:var(--ink); min-height:3.3em; }
+:root[data-look="chart"] .verse blockquote { font-family:var(--serif); font-style:italic; font-size:19px; line-height:1.5; }
+.verse cite { text-align:center; font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); }
+.verse .v-act { justify-content:center; border-top:1px dashed var(--line2); }
+.verse .v-act p { font-size:13px; color:var(--soft); }
+.verse .v-act p span { color:var(--amber); }
+.verse.rise::after { display:none; }
+.verse.rise cite, .verse.rise .v-act { animation-delay:1.4s; }
+
+/* вкладки и боковое меню */
+.tabbar { background:var(--dock); border-top:1px solid var(--line2); }
+.tabbar a, .side-nav a { font-size:10px; font-weight:500; letter-spacing:.12em; text-transform:uppercase; }
+.tabbar a[aria-current="page"], .side-nav a[aria-current="page"] { color:var(--ink); }
+:root:not([data-look="chart"]) .tabbar a[aria-current="page"] svg { filter:drop-shadow(0 0 6px rgba(255,255,255,.45)); }
+.toast, .tip { border-radius:8px; font-size:13px; }
+.sheet-in { border-radius:14px 14px 0 0; }
+.pray-btn { border-radius:8px; }
+
+@media (min-width:960px) {
+  .side { border-right:1px solid var(--line2); }
+  .brand { font:500 24px/1 var(--disp); letter-spacing:.08em; text-transform:uppercase; }
+  .side-nav a { font-size:12px; letter-spacing:.14em; }
+  .side-nav a[aria-current="page"] { background:var(--ink); color:var(--on-ink); border-radius:6px; }
+  .top { padding-top:24px; }
+  #compass { height:min(520px, calc(100vh - 330px)); min-height:400px; }
+  .phase { font-size:58px; } .phase.long { font-size:44px; letter-spacing:.14em; margin-left:.14em; }
+  .sheet-in { border-radius:14px; }
+}
+@media (max-width:420px) {
+  .hero .status .wide { display:none; }
+  .clk-s { font-size:9.5px; letter-spacing:.06em; }
+}
+.top-row .eyebrow { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

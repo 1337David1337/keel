@@ -256,3 +256,33 @@ test("стих дня: виден наверху, с делом на сегод�
   await expect(card.locator("button")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test("вид по солнцу: днём — карта, после заката — HUD, ночью — красный свет", async ({ page }) => {
+  const look = () => page.evaluate(() => [document.documentElement.dataset.look, document.documentElement.classList.contains("red")]);
+  const { errors } = await open(page, { time: "13:00" });
+  expect(await look()).toEqual(["chart", false]);
+  await expect(page.locator("#hero-status")).toContainText("Курс");
+  await expect(page.locator("#sun-t")).toContainText("восход");
+  for (const [hm, want] of [["20:00", ["hud", false]], ["23:00", ["hud", true]]]) {
+    await page.clock.setFixedTime(`2026-10-02T${hm}:00+03:00`);
+    await page.reload();
+    await page.locator("#main").waitFor({ state: "visible" });
+    expect(await look()).toEqual(want);
+  }
+  await page.locator('#hero [data-hero="red"]').click();
+  expect(await look()).toEqual(["hud", false]);
+  expect(errors).toEqual([]);
+});
+
+test("воскресенье: «День Господень» без упора и дел, дела — по кнопке", async ({ page }) => {
+  const { errors } = await open(page);
+  await page.clock.setFixedTime("2026-10-04T12:00:00+03:00");
+  await page.reload();
+  await page.locator("#main").waitFor({ state: "visible" });
+  await expect(page.locator("#phase")).toHaveText("День Господень");
+  await expect(page.locator("#focus-card")).toBeHidden();
+  await expect(page.locator("#verse-card cite")).toHaveText("Псалом 117:24");
+  await page.locator('#hero [data-hero="show"]').click();
+  await expect(page.locator("#focus-card")).toBeVisible();
+  expect(errors).toEqual([]);
+});

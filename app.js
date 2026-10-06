@@ -587,6 +587,67 @@ function renderDuoCard() {
     <div class="pc-t"><span class="eyebrow">${esc(h.name)}</span><b>${esc(line)}</b><span>${esc(sub.trim())}</span></div>
     <button type="button" class="btn${ready ? "" : " ghost"}" data-duo="done">Сделали</button>`;
 }
+/* ---------- книга и отбой ---------- */
+// Книга — привычка из настроек, а пока не выбрана — первая с «книг»/«чтени» в названии, кроме вечерней вдвоём
+const readHabit = () => {
+  const st = settings(), hs = active();
+  if (st.readHabit === "none") return null;
+  return hs.find(h => h.id === st.readHabit) || hs.find(h => h.id !== st.eveningHabit && /книг|чтени/i.test(h.name)) || null;
+};
+const readMin = () => settings().readMinutes || 15;
+const lunchAt = () => toMin(settings().lunch || "13:00");
+// Отбой — в вечерних минутах (00:00 → 24:00); закрыть день — за SHUT минут до него
+const lightsOut = () => bedMinOf(settings().lightsOut || "23:30");
+const SHUT = 10;
+const workday = d => (settings().work?.days || []).includes(dow(d));
+// Когда вечер освободится: ребёнок уснул (или обычно засыпает) → выдержка и время вдвоём, если его ещё не было
+function eveningFree(k, now = evNow()) {
+  const bed = bedOf(k), ub = usualBed(), eh = evHabit();
+  if (bed == null && !ub) return null;
+  const base = bed ?? Math.max(ub.at, now), duo = !!eh && !isDone(k, eh.id);
+  return { base, guess: bed == null, duo, at: base + (duo ? lightSleep().d + evMinutes() : 0) };
+}
+function renderBookCard() {
+  const card = $("#book-card"), h = S.data && readHabit();
+  if (!h) { card.hidden = true; return; }
+  const t = todayDate(), hr = new Date().getHours(), m = nowMin(), name = kidName();
+  const lo = lightsOut(), last = lo - SHUT - readMin(), len = readMin();
+  const lunch = workday(t) && m >= lunchAt() - 15 && m < lunchAt() + 60;
+  const evening = (hr >= 18 || hr < 3) && evNow() >= bedFrom() && evNow() < lo;
+  const k = hr < 3 ? ymd(addDays(t, -1)) : ymd(t);
+  card.hidden = isDone(k, h.id) || !(lunch || evening);
+  if (card.hidden) return;
+  const why = fr => `${name} ${fr.guess ? `обычно засыпает ≈ ${hm(fr.base)}` : `уснул в ${hm(fr.base)}`}${fr.duo ? `, вдвоём — до ≈ ${hm(fr.at)}` : ""}`;
+  let line, sub, btn = "Прочитал", main = true;
+  if (lunch) {
+    const fr = eveningFree(ymd(t), 0);
+    line = `Обед — время книги, ${len} мин`;
+    sub = !fr ? "Днём голова свежая, а вечер непредсказуем."
+      : fr.at > last ? `Вечером окна, скорее всего, не будет: ${why(fr)}, отбой в ${hm(lo)}.`
+      : `Вечером может найтись окно после ${hm(fr.at)}, но обед надёжнее.`;
+  } else {
+    const now = evNow(), fr = eveningFree(k, now), start = Math.max(now, fr?.at ?? now);
+    if (now > last) {
+      line = "Книга — завтра в обед";
+      sub = `До отбоя в ${hm(lo)} уже не успеть, а к ночи прочитанное не усваивается. Сон важнее.`;
+      main = false;
+    } else if (start > last) {
+      line = "Сегодня книга не влезет";
+      sub = `${why(fr)} — дальше только закрыть день и отбой в ${hm(lo)}. Книга — завтра в обед.`;
+      main = false;
+    } else if (now >= start) {
+      line = `Можно читать сейчас — ${len} мин, до ${hm(now + len)}`;
+      sub = `Начни не позже ${hm(last)} — тогда успеешь закрыть день до отбоя в ${hm(lo)}.`;
+    } else {
+      line = `Окно для книги ≈ ${hm(start)}–${hm(start + len)}`;
+      sub = `${why(fr)}. Начни не позже ${hm(last)} — иначе книга переезжает на завтрашний обед.`;
+      main = false;
+    }
+  }
+  card.innerHTML = `<div class="r-ic"><svg viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5h9.5a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h9.5"/></svg></div>
+    <div class="pc-t"><span class="eyebrow">${esc(h.name)}</span><b>${esc(line)}</b><span>${esc(sub)}</span></div>
+    <button type="button" class="btn${main ? "" : " ghost"}" data-book="${k}">${btn}</button>`;
+}
 const bedDateNow = () => { const now = new Date(); return ymd(addDays(todayDate(), now.getHours() < 12 ? -1 : 0)); };
 function countWakes() { return Object.values(S.data?.kid || {}).filter(v => v.wake).length; }
 
@@ -693,7 +754,7 @@ function render() {
   renderProgress(); renderSystem(); renderManage(); renderSettingsPanel();
   renderRitualCard(); renderSlotCard(); renderFocus(); renderBalance(); renderSlotPlan(); renderFocusTime();
   renderMonth();
-  renderPrayCard(); renderDuoCard(); renderVerse(); renderPrayStats(); renderPraySettings(); renderNeeds(); renderRemind();
+  renderPrayCard(); renderDuoCard(); renderBookCard(); renderVerse(); renderPrayStats(); renderPraySettings(); renderNeeds(); renderRemind();
   renderHero(); renderMetrics();
 }
 function renderHeader() {
@@ -874,6 +935,7 @@ function recentKid(days) {
   return { wakes, beds, nights };
 }
 const median = a => a.length ? wq(a, a.map(() => 1), .5) : null;
+const recentMe = days => Array.from({ length: days }, (_, i) => meWakeOf(ymd(addDays(todayDate(), -i)))).filter(x => x != null);
 function renderKidTiles() {
   const r = recentKid(30), m = kidModel(), t = todayDate();
   let nn = 0, nc = 0, onPlan = 0, meDays = 0;
@@ -1313,6 +1375,9 @@ function renderPlan() {
     const L = lightSleep(), base = bedDay ?? ub.at;
     add(base + L.d, `≈ ${hm(base + L.d)}`, "tl-duo", "Молитва и чтение вдвоём", bedDay != null ? `через ${L.d} мин после того, как ${name} уснул` : `если ${name} уснёт ≈ ${hm(base)}`);
   }
+  const bk = readHabit();
+  if (bk && workday(d) && !isDone(k, bk.id)) add(lunchAt(), hm(lunchAt()), "tl-book", "Книга в обед", `${readMin()} мин · ${bk.name}`);
+  add(lightsOut(), hm(lightsOut()), "tl-out" + (S.data.rituals.evening?.[k] ? " done" : ""), "Отбой", S.data.rituals.evening?.[k] ? `день закрыт в ${S.data.rituals.evening[k]}` : `закрыть день — до ${hm(lightsOut() - SHUT)}`);
   slotsOn(d).forEach(x => {
     const ss = sess(sKey(k, x.from)), stx = { done: " · сделано", started: " · идёт", skipped: " · пропущен", moved: " · перенесён" }[ss?.status] || "";
     add(toMin(x.from), `${hz(x.from)}–${hz(x.to)}`, "slot" + (ss?.status === "done" ? " done" : ""), "Свободный слот", ss?.text ? `${ss.text}${stx}` : "шаг не выбран", toMin(x.to));
@@ -1649,6 +1714,16 @@ function renderSettingsPanel() {
     $("#wk-from").value = w.from || ""; $("#wk-to").value = w.to || "";
     $("#wk-days").innerHTML = DOW.map((d, i) => `<label><input type="checkbox" value="${i}" ${(w.days || []).includes(i) ? "checked" : ""}>${d}</label>`).join("");
   }
+  if (!$("#rest-form").contains(document.activeElement)) {
+    const rh = readHabit();
+    $("#rd-lunch").value = st.lunch || "13:00";
+    $("#rd-habit").innerHTML = active().map(h => `<option value="${esc(h.id)}" ${h.id === rh?.id ? "selected" : ""}>${esc(h.name)}</option>`).join("")
+      + `<option value="none" ${!rh ? "selected" : ""}>без книги</option>`;
+    $("#rd-min").innerHTML = [10, 15, 20, 30].map(n => `<option value="${n}" ${n === readMin() ? "selected" : ""}>${n} мин</option>`).join("");
+    // до полуночи: позже расписание напоминаний уже не работает
+    const outs = []; for (let m = 22 * 60; m <= 24 * 60; m += 15) outs.push(m);
+    $("#rd-out").innerHTML = outs.map(m => `<option value="${pad(m / 60 % 24 | 0)}:${pad(m % 60)}" ${m === lightsOut() ? "selected" : ""}>${hm(m)}</option>`).join("");
+  }
   $("#gt-state").textContent = !st.tasksUrl ? "Не подключено."
     : T.loading ? "Подключено, загружаю задачи…"
     : T.error ? tasksError()
@@ -1747,6 +1822,12 @@ $("#duo-card").addEventListener("click", e => {
   const k = bedDateNow(), val = b.dataset.duo === "done";
   op({ t: "check", date: k, hid: h.id, val });
   if (val) toast(`«${h.name}» отмечено`, () => op({ t: "check", date: k, hid: h.id, val: false }));
+});
+$("#book-card").addEventListener("click", e => {
+  const b = e.target.closest("[data-book]"), h = readHabit();
+  if (!b || !h) return;
+  const k = b.dataset.book;
+  if (op({ t: "check", date: k, hid: h.id, val: true })) toast(`«${h.name}» отмечено`, () => op({ t: "check", date: k, hid: h.id, val: false }));
 });
 $("#ks-bedfrom").addEventListener("change", e => { if (e.target.value) setSetting({ bedFrom: e.target.value }); });
 $("#kc-prev").addEventListener("click", () => { S.kidOffset--; renderKid(); });
@@ -1926,6 +2007,13 @@ $("#work-form").addEventListener("change", () => setSetting({ work: {
   from: $("#wk-from").value, to: $("#wk-to").value,
   days: [...document.querySelectorAll("#wk-days input:checked")].map(x => Number(x.value)),
 } }));
+$("#rest-form").addEventListener("change", e => {
+  const el = e.target, v = el.value;
+  if (el.id === "rd-lunch" && v) setSetting({ lunch: v });
+  else if (el.id === "rd-habit") setSetting({ readHabit: v });
+  else if (el.id === "rd-min") setSetting({ readMinutes: Number(v) });
+  else if (el.id === "rd-out") setSetting({ lightsOut: v });
+});
 $("#tg-norm").addEventListener("change", e => setSetting({ togetherPerWeek: Number(e.target.value) }));
 $("#rv-btn").addEventListener("click", () => {
   const week = weekKey(todayDate()), prev = S.data.reviews[week] || null;
@@ -2718,8 +2806,12 @@ function ritualDue() {
   const hr = new Date().getHours(), t = todayDate(), dw = dow(t);
   if (dw >= 5 && !S.data.reviews[weekKey(t)]) return { kind: "weekly" };
   if (dw === 0 && hr < 12 && !S.data.reviews[weekKey(addDays(t, -7))]) return { kind: "weekly", last: true };
-  const rd = ymd(hr < 3 ? addDays(t, -1) : t);
-  if ((hr >= 19 || hr < 3) && !S.data.rituals.evening?.[rd]) return { kind: "evening" };
+  const rd = ymd(hr < 3 ? addDays(t, -1) : t), lo = lightsOut(), now = evNow();
+  if ((hr >= 19 || hr < 3) && !S.data.rituals.evening?.[rd]) return { kind: now >= lo ? "short" : "evening", soon: now >= lo - 45, lo };
+  // Вчера закрыл день коротко — утром, после молитвы, отметить вчерашние привычки и выбрать главное
+  const yk = ymd(addDays(t, -1));
+  if (hr >= 5 && hr < 13 && S.data.rituals.short?.[yk] && !S.data.rituals.morning?.[ymd(t)] && (hr >= 9 || prayMinutes(ymd(t)) >= prTarget()))
+    return { kind: "morning" };
   return null;
 }
 function renderRitualCard() {
@@ -2729,11 +2821,15 @@ function renderRitualCard() {
   const icon = r.kind === "weekly"
     ? '<svg viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4M8.5 14.5l2 2 4-4"/></svg>'
     : '<svg viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.8" stroke-linecap="round"><path d="M15.5 4a8.5 8.5 0 1 0 4.8 12.4A7 7 0 0 1 15.5 4z"/></svg>';
-  const [title, sub] = r.kind === "weekly"
-    ? [r.last ? "Обзор прошлой недели" : "Обзор недели", "Итоги, задачи, цели и шаги на слоты — около 20 минут."]
-    : ["Вечерние 5 минут", "Отметь день, выбери главное на завтра и загляни в завтрашний день."];
+  const left = r.lo != null ? r.lo - evNow() : 0;
+  const [title, sub, go] = r.kind === "weekly"
+    ? [r.last ? "Обзор прошлой недели" : "Обзор недели", "Итоги, задачи, цели и шаги на слоты — около 20 минут.", "Начать"]
+    : r.kind === "short" ? [`Отбой был в ${hm(r.lo)}`, "Одна минута: что не успел — на завтра, и спать. Привычки и главное отметишь утром.", "Закрыть день"]
+    : r.kind === "morning" ? ["Вчера закрыл день коротко", "Отметь привычки за вчера и выбери главное на сегодня — две минуты.", "Начать"]
+    : r.soon ? [`Закрой день — отбой в ${hm(r.lo)}`, `Осталось ${fmtDur(left)}. Что не успел — на завтра, книга — в обед. Сейчас только закрыть день.`, "Начать"]
+    : ["Вечерние 5 минут", `Отметь день, перенеси хвосты и выбери главное на завтра. Отбой в ${hm(r.lo)}.`, "Начать"];
   card.innerHTML = `<div class="r-ic">${icon}</div><div class="r-t"><b>${title}</b><span>${sub}</span></div>
-    <button type="button" class="btn" data-open-wizard="${r.kind}">Начать</button>`;
+    <button type="button" class="btn" data-open-wizard="${r.kind}">${go}</button>`;
 }
 
 /* ---------- окно ритуала ---------- */
@@ -2780,6 +2876,30 @@ function wizFocus() {
     <div class="pick"><p class="pick-h">Своё</p><form class="inline-plan" data-fown><input class="field" id="wf-own" placeholder="Например: позвонить в банк" autocomplete="off" ${full ? "disabled" : ""}><button type="submit" class="btn ghost" ${full ? "disabled" : ""}>Добавить</button></form></div>`;
 }
 const addDaysK = (k, n) => ymd(addDays(parse(k), n));
+// Хвосты дня: главное, которое не сделано, и задачи Google со сроком на этот день или раньше.
+// Перенос на завтра записывает их — и голова может отпустить их до утра
+function tailsOf(k) {
+  const out = [];
+  (S.data.focus[k] || []).forEach((x, i) => { if (!focusDone(x, k)) out.push({ id: x.taskId ? "t:" + x.taskId : `f:${i}`, t: x.t, src: x.src || "главное", focus: x, taskId: x.taskId || null }); });
+  if (T.data) {
+    const open = T.data.tasks.filter(x => x.status !== "completed" && !parked(x) && x.due && x.due <= k), ids = new Set(open.map(x => x.id));
+    open.filter(x => !ids.has(x.parent)).forEach(x => {
+      if (out.some(o => o.taskId === x.id)) return;
+      out.push({ id: "t:" + x.id, t: x.title, src: `${taskSrc(x)}${x.due < k ? ` · срок ${fmtDM.format(parse(x.due))}` : ""}`, taskId: x.id });
+    });
+  }
+  return out;
+}
+function wizTails() {
+  const items = tailsOf(W.st.dayK), off = W.st.keep;
+  W.tails = items;
+  const when = W.st.target === ymd(todayDate()) ? "сегодня" : "завтра";
+  if (!items.length) return `<p class="note" style="margin:0">Хвостов нет — всё, что было на этот день, закрыто. Можно спать.</p>`
+    + (T.data ? "" : `<p class="note" style="margin:0">Google Задачи не загрузились — проверил только главное.</p>`);
+  return `<p class="note" style="margin:0">Что не успел — не держи в голове ночью. Записанное на ${when} мозг отпускает, и уснуть проще. Нажми, чтобы оставить дело как есть.</p>
+    <div class="pick">${items.map((it, i) => { const on = !off.has(it.id);
+      return `<button type="button" class="pi" data-tail="${i}" aria-pressed="${on}"><span>${esc(it.t)}<small>${esc(it.src)} · ${on ? `на ${when}` : "останется как есть"}</small></span><span class="plus">${on ? "→" : "–"}</span></button>`; }).join("")}</div>`;
+}
 function wizSlotInputs(list) {
   return list.length ? (slotSteps().length ? "" : `<p class="note" style="margin:0">${NO_STEPS()}</p>`)
     + `<ul class="splan card">${list.map(x => { const s = sess(x.key);
@@ -2842,7 +2962,9 @@ function wizGoals() {
   }).join("");
 }
 const WIZ = {
-  evening: { title: "Вечерние 5 минут", steps: [["Привычки за день", wizHabits], ["Чему уделил время", wizCare], ["Главное на завтра", wizFocus], ["Завтра", wizTomorrow]] },
+  evening: { title: "Вечерние 5 минут", steps: [["Привычки за день", wizHabits], ["Хвосты — на завтра", wizTails], ["Чему уделил время", wizCare], ["Главное на завтра", wizFocus], ["Завтра", wizTomorrow]] },
+  short: { title: "Закрыть день", steps: [["Хвосты — на завтра", wizTails]] },
+  morning: { title: "Утро после короткого вечера", steps: [["Привычки за вчера", wizHabits], ["Главное на сегодня", wizFocus]] },
   focus: { title: "Главное на сегодня", steps: [["Главное на сегодня", wizFocus]] },
   weekly: { title: "Обзор недели", steps: [["Итоги недели", wizWeekSummary], ["Задачи", wizTasks], ["Цели", wizGoals], ["Слоты на неделю", () => wizSlotInputs(upcomingSlots(8))]] },
 };
@@ -2850,9 +2972,12 @@ function openWizard(kind) {
   if (!canWrite()) { openConnect(); return; }
   const hr = new Date().getHours(), t = todayDate();
   W.kind = kind; W.i = 0;
-  if (kind === "evening") {
+  if (kind === "evening" || kind === "short") {
     const dayK = ymd(hr < 3 ? addDays(t, -1) : t), target = ymd(hr < 3 ? t : addDays(t, 1));
-    W.st = { dayK, target, focus: (S.data.focus[target] || []).map(x => ({ ...x })), plans: {} };
+    W.st = { dayK, target, focus: (S.data.focus[target] || []).map(x => ({ ...x })), plans: {}, keep: new Set() };
+  } else if (kind === "morning") {
+    const tk = ymd(t);
+    W.st = { dayK: ymd(addDays(t, -1)), target: tk, focus: (S.data.focus[tk] || []).map(x => ({ ...x })), plans: {}, keep: new Set() };
   } else if (kind === "focus") {
     const tk = ymd(t);
     W.st = { dayK: tk, target: tk, focus: (S.data.focus[tk] || []).map(x => ({ ...x })), plans: {} };
@@ -2895,17 +3020,27 @@ function finishWizard() {
   const ops = [], kind = W.kind, st = W.st, tk = ymd(todayDate());
   for (const [key, v] of Object.entries(st.plans)) { const o = planOp(key, v); if (o) ops.push(o); }
   let msg = "";
-  if (kind === "evening" || kind === "focus") {
+  if (kind !== "weekly") {
+    // хвосты: несделанное главное переезжает в главное на завтра (если есть место), задачам Google — новый срок
+    const tails = kind === "evening" || kind === "short" ? tailsOf(st.dayK).filter(x => !st.keep.has(x.id)) : [];
+    tails.forEach(x => {
+      if (x.focus && st.focus.length < 3 && !st.focus.some(f => (x.taskId && f.taskId === x.taskId) || f.t === x.t)) st.focus.push({ ...x.focus, done: false });
+    });
     const items = st.focus.map(x => {
       const task = x.taskId && T.data?.tasks.find(t => t.id === x.taskId);
       const prev = "prevDue" in x ? { prevDue: x.prevDue } : task && task.due !== st.target ? { prevDue: task.due } : {};
       return { t: x.t, src: x.src || "", done: !!x.done, taskId: x.taskId || null, listId: x.listId || null, goal: x.goal || null, habit: x.habit || null, ...prev };
     });
     ops.push({ t: "focus", date: st.target, items });
-    if (kind === "evening") ops.push({ t: "ritual", kind: "evening", date: st.dayK, time: nowHM() });
-    msg = items.length ? `Главное на ${st.target === tk ? "сегодня" : "завтра"}: ${items.length}` : "Готово";
+    if (kind === "evening" || kind === "short") ops.push({ t: "ritual", kind: "evening", date: st.dayK, time: nowHM() });
+    if (kind === "short") ops.push({ t: "ritual", kind: "short", date: st.dayK, time: nowHM() });
+    if (kind === "morning") ops.push({ t: "ritual", kind: "morning", date: st.target, time: nowHM() });
+    msg = kind === "short" ? `День закрыт${tails.length ? `, на завтра: ${tails.length}` : ""}. Спокойной ночи`
+      : items.length ? `Главное на ${st.target === tk ? "сегодня" : "завтра"}: ${items.length}` : "Готово";
+    if (kind === "evening") { const left = lightsOut() - evNow(); if (left > 0) msg += ` · до отбоя ${fmtDur(left)}`; }
     if (tasksUrl() && T.data) {
-      const need = items.map(x => x.taskId && T.data.tasks.find(t => t.id === x.taskId)).filter(t => t && t.due !== st.target);
+      const ids = new Set([...items.map(x => x.taskId), ...tails.map(x => x.taskId)].filter(Boolean));
+      const need = [...ids].map(id => T.data.tasks.find(t => t.id === id)).filter(t => t && t.status !== "completed" && t.due !== st.target);
       Promise.all(need.map(t => taskDue(t, st.target))).then(() => { if (need.length) renderPlan(); })
         .catch(() => notice("Дату в Google Задачах поставить не удалось. Обнови скрипт google-tasks.gs и сделай новую версию развёртывания — см. «Настройки → Google Задачи»."));
     }
@@ -2940,6 +3075,8 @@ addEventListener("keydown", e => { if (e.key === "Escape" && W.kind) closeWizard
 $("#sheet-body").addEventListener("click", e => {
   const h = e.target.closest("[data-wh]");
   if (h) { const k = W.st.dayK; op({ t: "check", date: k, hid: h.dataset.wh, val: !isDone(k, h.dataset.wh) }); renderWizard(); return; }
+  const tl = e.target.closest("[data-tail]");
+  if (tl) { const it = W.tails?.[Number(tl.dataset.tail)]; if (it) { W.st.keep.has(it.id) ? W.st.keep.delete(it.id) : W.st.keep.add(it.id); renderWizard(); } return; }
   const a = e.target.closest("[data-fadd]");
   if (a && !a.disabled) {
     const c = W.cands[Number(a.dataset.fadd)], at = c ? W.st.focus.findIndex(x => (c.taskId && x.taskId === c.taskId) || x.t === c.t) : -1;
@@ -3354,6 +3491,18 @@ function renderMetrics() {
   const per = on.length ? Math.round(on.reduce((a, x) => a + x, 0) / on.length) : 0;
   out.push(metric("var(--violet)", "Молитва", `цель <em>${prTarget()}</em> мин`, `${on.length}<span class="of">из 7</span>`,
     on.length ? `${plural(on.length, "день", "дня", "дней")} · по ${per} мин` : "дней пока нет", bars(pr, "var(--violet)", prTarget())));
+  // отбой: во сколько закрыл день и сколько осталось на сон до своего подъёма. Сегодняшний вечер, пока не закрыт, — не пропуск
+  const evs = S.data.rituals.evening || {}, shut = k => bedMinOf(evs[k]), lo = lightsOut();
+  const nk = evs[tk] ? week : [prev[6], ...week.slice(0, 6)];
+  if (nk.some(k => shut(k) != null)) {
+    const sl = nk.map(k => { const a = shut(k), w = meWakeOf(addDaysK(k, 1)); return a != null && w != null && w + 1440 > a ? w + 1440 - a : null; });
+    const sv = sl.filter(x => x != null), ok = nk.filter(k => shut(k) != null && shut(k) <= lo + 10).length;
+    const wakes = recentMe(30), need = wakes.length ? median(wakes) + 1440 - lo : null;
+    out.push(metric("var(--blue)", "Отбой", `цель <em>${hm(lo)}</em>`, `${ok}<span class="of">из 7</span>`,
+      `${plural(ok, "вечер", "вечера", "вечеров")} вовремя${sv.length ? ` · сон ≈ ${fmtDur(median(sv))}` : ""}`,
+      bars(sl.map(x => x == null ? null : x / 60), "var(--blue)", need ? need / 60 : null),
+      `Время — когда закрыл день; сон — от него до твоего подъёма${need ? `, пунктир — ${fmtDur(need)} при отбое вовремя` : ""}.`));
+  }
   // сферы: сколько из ритмичных набрали норму, и куда перекос
   const rows = balance(tk).filter(r => !r.onDemand);
   if (rows.length) {
@@ -3483,7 +3632,7 @@ setInterval(() => {
   // Раз в минуту: смена дня и полдень (после 12:00 прогноз переключается на завтра)
   const now = new Date(), key = ymd(todayDate()) + (now.getHours() < 12 ? "am" : "pm");
   if (key !== lastKey) { lastKey = key; S.memo = null; render(); }
-  else if (S.data) { renderKid(); renderPlan(); renderSlotCard(); renderRitualCard(); renderDuoCard(); renderNow(); renderHero(); }
+  else if (S.data) { renderKid(); renderPlan(); renderSlotCard(); renderRitualCard(); renderDuoCard(); renderBookCard(); renderNow(); renderHero(); }
   else window.Sky?.apply({ theme: themeChoice(), red: redOn() });
 }, 60000);
 let lastW = innerWidth;
@@ -3512,7 +3661,7 @@ addEventListener("online", () => { if (S.cfg) S.pending.length ? flush() : refre
 // Подписка на push хранится в data.json; присылает их GitHub Actions в репозитории с данными
 // (.github/remind.mjs) по расписанию. Здесь — открытый ключ, секретный лежит в секретах того репозитория
 const VAPID_PUBLIC = "BICTIBsqLSn51VxG2CaUrh0IGbW-NDN2gklsoSYeNpxasmb_EGAbyRIpDprI-Pv5U81ORvOBV6CK8ttqlrR71XM";
-const RM_DEFAULT = { morning: "06:30", evening: "21:30", weekly: "20:00", slots: true };
+const RM_DEFAULT = { morning: "06:30", evening: "21:30", weekly: "20:00", slots: true, lunch: true, bedtime: true };
 const rmSettings = () => ({ ...RM_DEFAULT, ...(settings().reminders || {}) });
 // Время — только в окнах, когда работает расписание: утро 5:00–9:00, вечер 19:00–23:30
 const rmTimes = (from, to) => { const out = []; for (let m = from; m <= to; m += 30) out.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)}`); return out; };
@@ -3570,7 +3719,7 @@ function renderRemind() {
     msg = "Включены на этом устройстве. Если дело уже сделано — молитва записана, вечерние 5 минут пройдены, — напоминание не придёт.";
     btns = `<button type="button" class="btn ghost" id="rm-test">Показать пример</button><button type="button" class="btn ghost" id="rm-off">Выключить здесь</button>`;
   } else {
-    msg = "Стезя напомнит об утренней молитве, вечерних 5 минутах, обзоре недели и свободном слоте.";
+    msg = "Стезя напомнит об утренней молитве, книге в обед, вечерних 5 минутах, отбое, обзоре недели и свободном слоте.";
     btns = `<button type="button" class="btn" id="rm-on" ${RM.busy ? "disabled" : ""}>${RM.busy ? "Включаю…" : "Включить на этом устройстве"}</button>`;
   }
   st.textContent = n ? `${n} ${plural(n, "устройство", "устройства", "устройств")}` : "";
@@ -3581,7 +3730,7 @@ function renderRemind() {
     RM_FIELDS.forEach(([k, times]) => {
       $(`#rm-${k}`).innerHTML = `<option value="">не напоминать</option>` + times.map(t => `<option value="${t}" ${t === r[k] ? "selected" : ""}>${hz(t)}</option>`).join("");
     });
-    $("#rm-slots").checked = !!r.slots;
+    ["slots", "lunch", "bedtime"].forEach(k => { $(`#rm-${k}`).checked = !!r[k]; });
   }
 }
 $("#remind").addEventListener("click", e => {
@@ -3592,7 +3741,7 @@ $("#remind").addEventListener("click", e => {
 $("#rm-form").addEventListener("change", e => {
   if (!canWrite()) return;
   const k = e.target.id.replace("rm-", "");
-  setSetting({ reminders: { ...rmSettings(), [k]: k === "slots" ? e.target.checked : e.target.value || null } });
+  setSetting({ reminders: { ...rmSettings(), [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value || null } });
   e.target.blur();
 });
 

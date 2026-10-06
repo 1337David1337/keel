@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Oswald:wght@400;500;600&family=PT+Serif:ital@0;1&display=swap">
-<link rel="stylesheet" href="style.css?v=47">
+<link rel="stylesheet" href="style.css?v=48">
 </head>
 <body>
 <div id="sky" aria-hidden="true"></div>
@@ -99,6 +99,7 @@
         </section>
         <section class="card pray-card" id="pray-card" hidden></section>
         <section class="card pray-card duo-card" id="duo-card" hidden></section>
+        <section class="card pray-card duo-card book-card" id="book-card" hidden></section>
         <section class="card ritual" id="ritual-card" hidden></section>
         <section class="card slot-card" id="slot-card" hidden></section>
         <section class="card bal" id="focus-card">
@@ -445,6 +446,8 @@
           <label for="rm-evening">Вечерние 5 минут <select class="field" id="rm-evening"></select></label>
           <label for="rm-weekly">Обзор недели, воскресенье <select class="field" id="rm-weekly"></select></label>
           <label class="check wide" for="rm-slots"><input type="checkbox" id="rm-slots"> За полчаса до свободного слота</label>
+          <label class="check wide" for="rm-lunch"><input type="checkbox" id="rm-lunch"> В обед — про книгу, если ещё не прочитал</label>
+          <label class="check wide" for="rm-bedtime"><input type="checkbox" id="rm-bedtime"> За полчаса до отбоя — закрыть день</label>
         </div>
         <p class="note">Приходят с опозданием до 15–20 минут — так работает бесплатное расписание GitHub.</p>
       </section>
@@ -477,6 +480,14 @@
             <label for="wk-from">С <input class="field" type="time" id="wk-from"></label>
             <label for="wk-to">До <input class="field" type="time" id="wk-to"></label>
             <div class="days" id="wk-days" role="group" aria-label="Рабочие дни"></div>
+          </div>
+          <h3 class="h3 top">Книга и отбой</h3>
+          <p class="note">В обед — карточка и напоминание про книгу. Вечером Стезя посчитает, успеешь ли почитать до отбоя; после отбоя предложит закрыть день за минуту, а привычки — отметить утром.</p>
+          <div class="fgrid" id="rest-form">
+            <label for="rd-lunch">Обед с <input class="field" type="time" id="rd-lunch"></label>
+            <label for="rd-habit">Книга — привычка <select class="field" id="rd-habit"></select></label>
+            <label for="rd-min">Сколько читать <select class="field" id="rd-min"></select></label>
+            <label for="rd-out">Отбой <select class="field" id="rd-out"></select></label>
           </div>
           <h3 class="h3 top">Свободные слоты</h3>
           <p class="note">Время, которое у тебя есть на свои дела. Оно попадает в ленту дня.</p>
@@ -642,6 +653,6 @@
 <script src="demo-data.js?v=2"></script>
 <script src="verses.js?v=2"></script>
 <script src="compass.js?v=2"></script>
-<script src="app.js?v=57"></script>
+<script src="app.js?v=58"></script>
 </body>
 </html>

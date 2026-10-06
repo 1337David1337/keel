@@ -148,7 +148,7 @@ test("напоминания: время сохраняется, на устро
   await expect(page.locator("#rm-evening")).toHaveValue("21:30");
   await page.locator("#rm-evening").selectOption("22:00");
   await page.locator("#rm-slots").uncheck();
-  await expect.poll(() => puts.at(-1)?.settings?.reminders).toEqual({ morning: "06:30", evening: "22:00", weekly: "20:00", slots: false });
+  await expect.poll(() => puts.at(-1)?.settings?.reminders).toEqual({ morning: "06:30", evening: "22:00", weekly: "20:00", slots: false, lunch: true, bedtime: true });
   expect((await page.request.get("/sw.js")).ok()).toBe(true);
   expect(errors).toEqual([]);
 });
@@ -294,4 +294,90 @@ test("фокус не предлагает задачи, которые уже �
   (await page.locator("#bal-rec button.pi").allInnerTexts()).forEach(t => seen.add(t));
   const all = [...seen].join("\n");
   for (const t of ["Подготовить машину к зиме", "Записаться на шиномонтаж", "Покрасить стену"]) expect(all).not.toContain(t);
+});
+
+test("книга: в обед — карточка с прогнозом вечера, «Прочитал» отмечает привычку", async ({ page }) => {
+  const data = fixture();
+  data.settings.lunch = "13:00";
+  data.kid[day(-3)].bed = "23:30"; data.kid[day(-1)].bed = "23:10"; data.kid[day(-2)].bed = "23:20";
+  const { puts, errors } = await open(page, { time: "13:05", data });
+  await expect(page.locator("#book-card")).toContainText("Обед — время книги, 15 мин");
+  await expect(page.locator("#book-card")).toContainText("Вечером окна, скорее всего, не будет");
+  await page.locator("#book-card [data-book]").click();
+  await expect.poll(() => puts.at(-1)?.log?.[TODAY]?.read).toBe(true);
+  await expect(page.locator("#book-card")).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("книга вечером: успеваешь — «читать сейчас», после крайнего срока — «завтра в обед»", async ({ page }) => {
+  const data = fixture();
+  data.kid[TODAY] = { bed: "21:40" };
+  await open(page, { time: "22:00", data });
+  await expect(page.locator("#book-card")).toContainText("Можно читать сейчас — 15 мин, до 22:15");
+  await page.clock.setFixedTime(`${TODAY}T23:10:00+03:00`);
+  await page.reload();
+  await page.locator("#main").waitFor({ state: "visible" });
+  await expect(page.locator("#book-card")).toContainText("Книга — завтра в обед");
+  // после отбоя книга молчит — остаётся только «Отбой был»
+  await page.clock.setFixedTime(`${TODAY}T23:35:00+03:00`);
+  await page.reload();
+  await page.locator("#main").waitFor({ state: "visible" });
+  await expect(page.locator("#book-card")).toBeHidden();
+  await expect(page.locator("#ritual-card")).toContainText("Отбой был в 23:30");
+});
+
+test("книга вечером: если вдвоём ещё впереди и до отбоя не влезет — честно говорит об этом", async ({ page }) => {
+  const data = fixture();
+  data.settings.eveningHabit = "duo";
+  data.habits.push({ id: "duo", name: "Молитва и чтение с женой", sphere: "жена", target: 5, order: 4, archived: false, created: "2026-09-01" });
+  data.kid[TODAY] = { bed: "22:40" };
+  await open(page, { time: "22:45", data });
+  await expect(page.locator("#book-card")).toContainText("Сегодня книга не влезет");
+  await expect(page.locator("#book-card")).toContainText("вдвоём — до ≈ 23:30");
+});
+
+test("отбой: после него — короткое закрытие дня, хвосты уходят на завтра", async ({ page }) => {
+  const data = fixture();
+  data.focus[TODAY] = [{ t: "Позвонить в банк", src: "" }, { t: "Выбрать подарок", src: "", done: true }];
+  const { puts, google, errors } = await open(page, { time: "23:40", data });
+  await expect(page.locator("#ritual-card")).toContainText("Отбой был в 23:30");
+  await page.locator('#ritual-card [data-open-wizard="short"]').click();
+  await expect(page.locator("#sheet-title")).toHaveText("Хвосты — на завтра");
+  const tails = page.locator("#sheet-body [data-tail]");
+  await expect(tails).toHaveText([/Позвонить в банк/, /Подготовить машину к зиме/, /Покрасить стену/]);
+  await tails.filter({ hasText: "Покрасить стену" }).click();
+  await expect(tails.filter({ hasText: "Покрасить стену" })).toContainText("останется как есть");
+  await page.locator("#sheet-next").click();
+  await expect.poll(() => puts.at(-1)?.rituals?.short?.[TODAY]).toBe("23:40");
+  expect(puts.at(-1).rituals.evening[TODAY]).toBe("23:40");
+  expect(puts.at(-1).focus[day(1)].map(x => x.t)).toEqual(["Позвонить в банк"]);
+  await expect.poll(() => google.map(x => `${x.action} ${x.id} ${x.due}`)).toEqual([`due p1 ${day(1)}`]);
+  await expect(page.locator("#ritual-card")).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("утро после короткого вечера: отметить вчерашние привычки и главное", async ({ page }) => {
+  const data = fixture();
+  data.rituals = { evening: { [day(-1)]: "00:20" }, short: { [day(-1)]: "00:20" } };
+  data.me[TODAY] = { wake: "07:10" };
+  const { puts } = await open(page, { time: "09:30", data });
+  await expect(page.locator("#ritual-card")).toContainText("Вчера закрыл день коротко");
+  await page.locator('#ritual-card [data-open-wizard="morning"]').click();
+  await expect(page.locator("#sheet-title")).toHaveText("Привычки за вчера");
+  await page.locator('#sheet-body [data-wh="read"]').click();
+  await expect.poll(() => puts.at(-1)?.log?.[day(-1)]?.read).toBe(true);
+  await page.locator("#sheet-next").click();
+  await page.locator("#sheet-next").click();
+  await expect.poll(() => puts.at(-1)?.rituals?.morning?.[TODAY]).toBe("09:30");
+  await expect(page.locator("#ritual-card")).toBeHidden();
+});
+
+test("показатель «Отбой»: сколько вечеров закрыто вовремя и сколько сна", async ({ page }) => {
+  const data = fixture();
+  data.rituals = { evening: { [day(-1)]: "23:20", [day(-2)]: "01:00" } };
+  data.me = { [TODAY]: { wake: "07:00" }, [day(-1)]: { wake: "07:00" } };
+  await open(page, { time: "10:00", data });
+  const m = page.locator(".metric", { hasText: "Отбой" });
+  await expect(m).toContainText("1из 7");
+  await expect(m).toContainText("вечер вовремя · сон ≈ 6 ч");
 });

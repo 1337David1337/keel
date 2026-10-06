@@ -965,7 +965,7 @@ ul.today li + li { border-top-style:dashed; }
 .today-v > .col-l, .today-v > .col-c, .today-v > .col-r { display:contents; }
 @media (max-width:1179px) {
   #hero { order:1; } #verse-card { order:2; } #mark { order:3; }
-  #pray-card, #duo-card, #ritual-card, #slot-card { order:4; }
+  #pray-card, #duo-card, #book-card, #ritual-card, #slot-card { order:4; }
   #focus-card { order:5; } #habits { order:6; } #tasks { order:7; } #metrics { order:8; }
 }
 
@@ -1020,6 +1020,12 @@ ul.today li + li { border-top-style:dashed; }
 .pray-card, .ritual, .slot-card, .duo-card { background:var(--card); border:1px solid var(--line2); border-left:2px solid var(--violet); border-radius:6px; padding:14px; }
 .slot-card { border-left-color:var(--blue); }
 .duo-card { border-left-color:var(--pink); }
+.book-card { border-left-color:var(--teal); }
+.book-card b { color:var(--teal); }
+.book-card .btn { background:var(--teal); }
+.book-card .btn.ghost { color:var(--teal); }
+.tl .tl-book::before { background:var(--teal); }
+.tl .tl-out::before { background:var(--blue); }
 .pray-card.met { background:var(--card); border-left-color:var(--teal); }
 .ritual .r-ic, .duo-card .r-ic { border-radius:6px; background:transparent; border:1px solid var(--line2); }
 .slot-card h3 { font-size:16px; }

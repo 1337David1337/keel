@@ -369,20 +369,12 @@ test("отбой: после него — короткое закрытие дн
   expect(errors).toEqual([]);
 });
 
-test("утро после короткого вечера: отметить вчерашние привычки и главное", async ({ page }) => {
+test("утро после короткого вечера: отдельного шага нет — главное выбирается в карточке", async ({ page }) => {
   const data = fixture();
   data.rituals = { evening: { [day(-1)]: "00:20" }, short: { [day(-1)]: "00:20" } };
-  data.me[TODAY] = { wake: "07:10" };
-  const { puts } = await open(page, { time: "09:30", data });
-  await expect(page.locator("#ritual-card")).toContainText("Вчера закрыл день коротко");
-  await page.locator('#ritual-card [data-open-wizard="morning"]').click();
-  await expect(page.locator("#sheet-title")).toHaveText("Привычки за вчера");
-  await page.locator('#sheet-body [data-wh="read"]').click();
-  await expect.poll(() => puts.at(-1)?.log?.[day(-1)]?.read).toBe(true);
-  await page.locator("#sheet-next").click();
-  await page.locator("#sheet-next").click();
-  await expect.poll(() => puts.at(-1)?.rituals?.morning?.[TODAY]).toBe("09:30");
+  await open(page, { time: "09:30", data });
   await expect(page.locator("#ritual-card")).toBeHidden();
+  await expect(page.locator("#focus-list")).toContainText("Выбрать сейчас");
 });
 
 test("показатель «Отбой»: сколько вечеров закрыто вовремя и сколько сна", async ({ page }) => {

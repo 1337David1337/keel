@@ -2809,10 +2809,6 @@ function ritualDue() {
   if (dw === 0 && hr < 12 && !S.data.reviews[weekKey(addDays(t, -7))]) return { kind: "weekly", last: true };
   const rd = ymd(hr < 3 ? addDays(t, -1) : t), lo = lightsOut(), now = evNow();
   if ((hr >= 19 || hr < 3) && !S.data.rituals.evening?.[rd]) return { kind: now >= lo ? "short" : "evening", soon: now >= lo - 45, lo };
-  // Вчера закрыл день коротко — утром, после молитвы, отметить вчерашние привычки и выбрать главное
-  const yk = ymd(addDays(t, -1));
-  if (hr >= 5 && hr < 13 && S.data.rituals.short?.[yk] && !S.data.rituals.morning?.[ymd(t)] && (hr >= 9 || prayMinutes(ymd(t)) >= prTarget()))
-    return { kind: "morning" };
   return null;
 }
 function renderRitualCard() {
@@ -2825,8 +2821,7 @@ function renderRitualCard() {
   const left = r.lo != null ? r.lo - evNow() : 0;
   const [title, sub, go] = r.kind === "weekly"
     ? [r.last ? "Обзор прошлой недели" : "Обзор недели", "Итоги, задачи, цели и шаги на слоты — около 20 минут.", "Начать"]
-    : r.kind === "short" ? [`Отбой был в ${hm(r.lo)}`, "Одна минута: что не успел — на завтра, и спать. Привычки и главное отметишь утром.", "Закрыть день"]
-    : r.kind === "morning" ? ["Вчера закрыл день коротко", "Отметь привычки за вчера и выбери главное на сегодня — две минуты.", "Начать"]
+    : r.kind === "short" ? [`Отбой был в ${hm(r.lo)}`, "Одна минута: что не успел — на завтра, и спать. Главное на день выберешь утром.", "Закрыть день"]
     : r.soon ? [`Закрой день — отбой в ${hm(r.lo)}`, `Осталось ${fmtDur(left)}. Что не успел — на завтра, книга — в обед. Сейчас только закрыть день.`, "Начать"]
     : ["Вечерние 5 минут", `Отметь день, перенеси хвосты и выбери главное на завтра. Отбой в ${hm(r.lo)}.`, "Начать"];
   card.innerHTML = `<div class="r-ic">${icon}</div><div class="r-t"><b>${title}</b><span>${sub}</span></div>
@@ -2965,7 +2960,6 @@ function wizGoals() {
 const WIZ = {
   evening: { title: "Вечерние 5 минут", steps: [["Привычки за день", wizHabits], ["Хвосты — на завтра", wizTails], ["Чему уделил время", wizCare], ["Главное на завтра", wizFocus], ["Завтра", wizTomorrow]] },
   short: { title: "Закрыть день", steps: [["Хвосты — на завтра", wizTails]] },
-  morning: { title: "Утро после короткого вечера", steps: [["Привычки за вчера", wizHabits], ["Главное на сегодня", wizFocus]] },
   focus: { title: "Главное на сегодня", steps: [["Главное на сегодня", wizFocus]] },
   weekly: { title: "Обзор недели", steps: [["Итоги недели", wizWeekSummary], ["Задачи", wizTasks], ["Цели", wizGoals], ["Слоты на неделю", () => wizSlotInputs(upcomingSlots(8))]] },
 };
@@ -2976,9 +2970,6 @@ function openWizard(kind) {
   if (kind === "evening" || kind === "short") {
     const dayK = ymd(hr < 3 ? addDays(t, -1) : t), target = ymd(hr < 3 ? t : addDays(t, 1));
     W.st = { dayK, target, focus: (S.data.focus[target] || []).map(x => ({ ...x })), plans: {}, keep: new Set() };
-  } else if (kind === "morning") {
-    const tk = ymd(t);
-    W.st = { dayK: ymd(addDays(t, -1)), target: tk, focus: (S.data.focus[tk] || []).map(x => ({ ...x })), plans: {}, keep: new Set() };
   } else if (kind === "focus") {
     const tk = ymd(t);
     W.st = { dayK: tk, target: tk, focus: (S.data.focus[tk] || []).map(x => ({ ...x })), plans: {} };
@@ -3035,7 +3026,6 @@ function finishWizard() {
     ops.push({ t: "focus", date: st.target, items });
     if (kind === "evening" || kind === "short") ops.push({ t: "ritual", kind: "evening", date: st.dayK, time: nowHM() });
     if (kind === "short") ops.push({ t: "ritual", kind: "short", date: st.dayK, time: nowHM() });
-    if (kind === "morning") ops.push({ t: "ritual", kind: "morning", date: st.target, time: nowHM() });
     msg = kind === "short" ? `День закрыт${tails.length ? `, на завтра: ${tails.length}` : ""}. Спокойной ночи`
       : items.length ? `Главное на ${st.target === tk ? "сегодня" : "завтра"}: ${items.length}` : "Готово";
     if (kind === "evening") { const left = lightsOut() - evNow(); if (left > 0) msg += ` · до отбоя ${fmtDur(left)}`; }

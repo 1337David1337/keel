@@ -471,12 +471,13 @@ function kidButtons() {
   return {
     wake: morning && wake == null,
     me: hr >= 3 && hr < 14 && me == null,
+    meBed: (hr >= 21 || hr < 5) && S.data?.me[nd]?.bed == null,
     bed0: (nowMin() >= bedFrom() || hr < 4) && bed == null,
     night: (hr >= 17 || hr < 12) && bed != null && !(hr < 14 && wake != null),
     resleep: (hr >= 17 || hr < 3) && bed != null && lastW != null && lastW - bed <= 120 && nowN >= lastW && nowN - lastW <= 180,
     bed, nights: kd[nd]?.nights || [], tries: kd[nd]?.tries || [], lastW, night0,
     bedDone: bedOf(night0), nightsDone: kd[night0]?.nights || [],
-    wakeDone: hr >= 17 ? null : wake, meDone: hr >= 17 ? null : me,
+    wakeDone: hr >= 17 ? null : wake, meDone: hr >= 17 ? null : me, meBedDone: bedMinOf(S.data?.me[night0]?.bed),
   };
 }
 const evNow = () => { const m = nowMin(); return m < 720 ? m + 1440 : m; };
@@ -614,7 +615,7 @@ function renderBookCard() {
   const t = todayDate(), hr = new Date().getHours(), m = nowMin(), name = kidName();
   const lo = lightsOut(), last = lo - SHUT - readMin(), len = readMin();
   const lunch = workday(t) && m >= lunchAt() - 15 && m < lunchAt() + 60;
-  const evening = (hr >= 18 || hr < 3) && evNow() >= bedFrom() && evNow() < lo;
+  const evening = (hr >= 18 || hr < 3) && evNow() >= bedFrom() && evNow() < lo && S.data.me[bedDateNow()]?.bed == null;
   const k = hr < 3 ? ymd(addDays(t, -1)) : ymd(t);
   card.hidden = isDone(k, h.id) || !(lunch || evening);
   if (card.hidden) return;
@@ -839,8 +840,10 @@ function renderKid() {
   const rec = recFor(tk);
   $("#me-wake-l").textContent = "Я встал";
   $("#me-wake-s").textContent = rec != null ? `нажми, когда встанешь · план ${hm(rec)}` : "нажми, когда встанешь";
-  $("#kid-wake").hidden = !K.wake; $("#kid-sleep").hidden = !K.bed0 && !K.resleep; $("#kid-night").hidden = !K.night; $("#me-wake").hidden = !K.me;
-  [$("#kid-wake"), $("#kid-sleep"), $("#kid-night"), $("#me-wake")].forEach(el => { el.disabled = !canWrite(); });
+  const left = lightsOut() - evNow();
+  $("#me-bed-s").textContent = left > 0 ? `отбой в ${hm(lightsOut())} · через ${fmtDur(left)}` : left >= -10 ? `отбой в ${hm(lightsOut())} — самое время` : `отбой был в ${hm(lightsOut())}, ${fmtDur(-left)} назад`;
+  $("#kid-wake").hidden = !K.wake; $("#kid-sleep").hidden = !K.bed0 && !K.resleep; $("#kid-night").hidden = !K.night; $("#me-wake").hidden = !K.me; $("#me-bed").hidden = !K.meBed;
+  [$("#kid-wake"), $("#kid-sleep"), $("#kid-night"), $("#me-wake"), $("#me-bed")].forEach(el => { el.disabled = !canWrite(); });
   // Уже отмеченное — плашками; нажатие открывает редактор этой ночи
   const chip = (color, text) => `<button type="button" class="chip-done" data-fix="${K.night0}"><i style="background:${color}"></i>${esc(text)}</button>`;
   const chips = [];
@@ -848,9 +851,10 @@ function renderKid() {
   if (K.bedDone != null) chips.push(chip("var(--blue)", `уснул в ${hm(K.bedDone)}${tries0 ? ` · с ${tries0 + 1}-го раза` : ""}`));
   if (K.nightsDone.length) chips.push(chip("var(--violet)", `просыпался: ${K.nightsDone.map(x => hm(toMin(x))).join(", ")}`));
   if (K.wakeDone != null) chips.push(chip("var(--amber)", `проснулся в ${hm(K.wakeDone)}`));
+  if (K.meBedDone != null) chips.push(chip("var(--teal)", `ты лёг в ${hm(K.meBedDone)}`));
   if (K.meDone != null) chips.push(chip("var(--teal)", `ты встал в ${hm(K.meDone)}`));
   if (chips.length) chips.push(`<button type="button" class="chip-done fix" data-fix="${K.night0}">Исправить</button>`);
-  else if (!K.wake && !K.bed0 && !K.night && !K.me) chips.push(`<span class="chip-note">Кнопка «${esc(name)} уснул» появится в ${hm(bedFrom())}.</span>`);
+  else if (!K.wake && !K.bed0 && !K.night && !K.me && !K.meBed) chips.push(`<span class="chip-note">Кнопка «${esc(name)} уснул» появится в ${hm(bedFrom())}.</span>`);
   $("#kid-done").innerHTML = chips.join("");
   // Если уже встал — вместо плана показываем, когда встал
   const meW = meWakeOf(tk), up = isToday && meW != null;
@@ -866,6 +870,7 @@ function renderKid() {
   $("#lg-kid").textContent = `подъём ${kidGen()}`;
   renderKidCal(fc, target);
   renderKidTiles();
+  renderMySleep();
   renderKidCharts();
   renderKidSettings();
 }
@@ -936,6 +941,14 @@ function recentKid(days) {
   return { wakes, beds, nights };
 }
 const median = a => a.length ? wq(a, a.map(() => 1), .5) : null;
+// Твоя ночь k: отбой по кнопке «Я лёг», а пока её нет — по времени, когда закрыл день; сон — до подъёма на следующее утро
+function myNight(k) {
+  const b = bedMinOf(S.data.me[k]?.bed), bed = b ?? bedMinOf(S.data.rituals?.evening?.[k]);
+  if (bed == null) return null;
+  const w = meWakeOf(addDaysK(k, 1));
+  return { k, bed, approx: b == null, wake: w, len: w != null && w + 1440 > bed ? w + 1440 - bed : null };
+}
+const onTime = n => n.bed <= lightsOut() + 10;
 const recentMe = days => Array.from({ length: days }, (_, i) => meWakeOf(ymd(addDays(todayDate(), -i)))).filter(x => x != null);
 function renderKidTiles() {
   const r = recentKid(30), m = kidModel(), t = todayDate();
@@ -996,6 +1009,63 @@ function renderInsights() {
     ? `Ложные засыпания: в ${fs.length} из ${on.length} раз ${name} просыпался в первый час после засыпания, обычно через ${Math.round(median(fs))} мин. Начинать вдвоём спокойнее через ${lightSleep().d} мин после засыпания.`
     : `${name} ни разу не просыпался в первый час после засыпания — можно начинать вдвоём почти сразу, как уснёт.`);
   $("#kid-insights").innerHTML = out.map(x => `<li>${esc(x)}</li>`).join("");
+}
+function renderMySleep() {
+  const t = todayDate(), lo = lightsOut();
+  const sh = myNight(ymd(t)) ? 1 : 0, keys = Array.from({ length: 14 }, (_, i) => ymd(addDays(t, -14 + i + sh)));
+  // строки — с первой ночи, где что-то записано
+  const first = keys.findIndex(k => myNight(k)), ks = first < 0 ? [] : keys.slice(first), all = ks.map(myNight), nn = all.filter(Boolean);
+  const tile = (v, l) => `<div><b>${v ?? "—"}</b><span>${l}</span></div>`;
+  let streak = 0;
+  for (let i = all.length - 1; i >= 0 && all[i] && onTime(all[i]); i--) streak++;
+  const lens = nn.map(n => n.len).filter(x => x != null), beds = nn.map(n => n.bed);
+  $("#ms-tiles").innerHTML = tile(beds.length ? hm(median(beds)) : null, "обычно ложишься")
+    + tile(lens.length ? dur(median(lens)) : null, "обычно спишь")
+    + tile(nn.length ? `${nn.filter(onTime).length} из ${nn.length}` : null, `ночей до ${hm(lo)}`)
+    + tile(`${streak}`, `${plural(streak, "ночь", "ночи", "ночей")} подряд вовремя`);
+  // ночи строками: полоса от отбоя до подъёма, пунктир — время отбоя
+  const el = $("#ms-chart");
+  if (!nn.length) el.innerHTML = `<p class="empty-c">Появится после первой ночи с кнопкой «Я лёг».</p>`;
+  else {
+    const vals = [lo, ...nn.map(n => n.bed), ...nn.filter(n => n.wake != null).map(n => n.wake + 1440)], ys = timeScale(vals, 15);
+    const W = chartWidth(el), rh = 20, pl = 52, pr = 50, pt = 18, H = pt + all.length * rh + 6, iw = W - pl - pr;
+    const X = v => pl + (v - ys.lo) / (ys.hi - ys.lo) * iw, every = Math.ceil(36 / (iw / Math.max(1, ys.ticks.length - 1)));
+    let svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Когда лёг и когда встал">`;
+    ys.ticks.forEach((v, i) => { svg += `<line x1="${X(v)}" x2="${X(v)}" y1="${pt}" y2="${H - 6}" class="grid"/>` + (i % every ? "" : `<text x="${X(v)}" y="${pt - 6}" class="ax" text-anchor="middle">${hm(v)}</text>`); });
+    svg += `<line x1="${X(lo)}" x2="${X(lo)}" y1="${pt - 2}" y2="${H - 6}" stroke="var(--blue)" stroke-dasharray="3 3"/>`;
+    all.forEach((n, i) => {
+      const y = pt + i * rh + rh / 2, d = parse(ks[i]);
+      svg += `<text x="${pl - 8}" y="${y + 3.5}" class="ax" text-anchor="end">${DOW[dow(d)].toLowerCase()} ${d.getDate()}</text>`;
+      if (!n) return;
+      const c = onTime(n) ? "var(--teal)" : "var(--amber)", x1 = X(n.bed), x2 = n.wake != null ? X(n.wake + 1440) : x1 + 4;
+      svg += `<rect x="${x1}" y="${y - 5}" width="${Math.max(4, x2 - x1)}" height="10" rx="5" fill="${c}" opacity="${n.approx ? .45 : .9}"
+        data-tip="${esc(`${fmtShort.format(d)} · ${n.approx ? "закрыл день" : "лёг"} в ${hm(n.bed)}${n.wake != null ? ` → встал в ${hm(n.wake)}` : ""}`)}"/>`;
+      if (n.len != null) svg += `<text x="${x2 + 6}" y="${y + 3.5}" class="ax">${Math.floor(n.len / 60)} ч ${pad(n.len % 60)}</text>`;
+    });
+    el.innerHTML = svg + "</svg>";
+  }
+  $("#ms-cap").textContent = `Полоса — от отбоя до подъёма, справа — сколько спал. Бирюзовая — лёг до ${hm(lo)}, янтарная — позже. Пунктир — отбой.`
+    + (nn.some(n => n.approx) ? " Бледные — без «Я лёг», по времени закрытия дня." : "");
+  // как сон влияет на следующий день
+  const out = [], rh2 = readHabit();
+  if (beds.length >= 3) {
+    const late = Math.round(median(beds) - lo);
+    out.push(late > 10 ? `Ложишься обычно в ${hm(median(beds))} — на ${fmtDur(late)} позже отбоя.` : `Ложишься обычно вовремя — около ${hm(median(beds))}.`);
+  }
+  const long = [], short = [];
+  for (let i = 1; i <= 60; i++) {
+    const n = myNight(ymd(addDays(t, -i)));
+    if (n?.len != null) (n.len >= 420 ? long : short).push(addDaysK(n.k, 1));
+  }
+  if (long.length >= 5 && short.length >= 5) {
+    const share = (ks, f) => `${ks.filter(f).length} из ${ks.length}`;
+    out.push(`Молитва утром: после сна от 7 ч — ${share(long, k => prayMinutes(k) > 0)}, после короткого — ${share(short, k => prayMinutes(k) > 0)}.`);
+    if (rh2) out.push(`«${rh2.name}»: после сна от 7 ч — ${share(long, k => isDone(k, rh2.id))} дней, после короткого — ${share(short, k => isDone(k, rh2.id))}.`);
+    const fr = ks => { let a = 0, b = 0; ks.forEach(k => (S.data.focus[k] || []).forEach(x => { b++; if (focusDone(x, k)) a++; })); return b ? `${a} из ${b}` : "—"; };
+    out.push(`Главное сделано: после сна от 7 ч — ${fr(long)}, после короткого — ${fr(short)}.`);
+    if (long.length + short.length < 20) out.push("Ночей пока мало — это наблюдение, а не вывод. С каждой неделей картина будет точнее.");
+  } else out.push(`Как сон влияет на утро — молитву, книгу и главное, — покажу, когда наберётся хотя бы по 5 ночей от 7 часов и короче. Сейчас: ${long.length} и ${short.length}.`);
+  $("#ms-insights").innerHTML = out.map(x => `<li>${esc(x)}</li>`).join("");
 }
 function renderKidCharts() {
   const t = todayDate(), pts = [];
@@ -1069,6 +1139,7 @@ function fillKidForm(k) {
   $("#kf-nights").value = (v.nights || []).map(x => hm(toMin(x))).join(", ");
   $("#kf-wake").value = S.data?.kid[next]?.wake || "";
   $("#kf-me").value = S.data?.me[next]?.wake || "";
+  $("#kf-mebed").value = S.data?.me[k]?.bed || "";
   $("#kf-wake").disabled = $("#kf-me").disabled = next > ymd(todayDate());
   if (S.data) renderNightList();
 }
@@ -1760,7 +1831,7 @@ function kidMark(kind) {
   if (!canWrite()) { openConnect(); return; }
   const now = nowHM(), t = hm(toMin(now)), name = kidName(), hr = new Date().getHours(), tk = ymd(todayDate());
   const K = kidButtons();
-  if ((kind === "wake" && !K.wake) || (kind === "bed" && !K.bed0 && !K.resleep) || (kind === "night" && !K.night) || (kind === "me" && !K.me)) return;
+  if ((kind === "wake" && !K.wake) || (kind === "bed" && !K.bed0 && !K.resleep) || (kind === "night" && !K.night) || (kind === "me" && !K.me) || (kind === "mebed" && !K.meBed)) return;
   if (kind === "wake") {
     const prev = S.data.kid[tk]?.wake ?? null;
     op({ t: "kid", date: tk, data: { wake: now } });
@@ -1779,6 +1850,10 @@ function kidMark(kind) {
     const date = bedDateNow(), prev = S.data.kid[date]?.nights || [];
     op({ t: "kid", date, data: { nights: [...prev, now] } });
     toast(`${name} проснулся в ${t} — ненадолго`, () => op({ t: "kid", date, data: { nights: prev.length ? prev : null } }));
+  } else if (kind === "mebed") {
+    const date = bedDateNow(), late = bedMinOf(now) - lightsOut();
+    op({ t: "me", date, data: { bed: now } });
+    toast(`Ты лёг в ${t}${late > 10 ? ` · на ${fmtDur(late)} позже отбоя` : " · вовремя"}. Спокойной ночи`, () => op({ t: "me", date, data: { bed: null } }));
   } else if (kind === "me") {
     const prev = S.data.me[tk]?.wake ?? null, rec = recFor(tk);
     op({ t: "me", date: tk, data: { wake: now } });
@@ -1791,6 +1866,7 @@ $("#night-list").addEventListener("click", e => { const b = e.target.closest("[d
 $("#kid-sleep").addEventListener("click", () => kidMark("bed"));
 $("#kid-night").addEventListener("click", () => kidMark("night"));
 $("#me-wake").addEventListener("click", () => kidMark("me"));
+$("#me-bed").addEventListener("click", () => kidMark("mebed"));
 $("#kf-date").addEventListener("change", e => { if (e.target.value) fillKidForm(e.target.value); });
 $("#kid-form").addEventListener("submit", e => {
   e.preventDefault();
@@ -1799,7 +1875,7 @@ $("#kid-form").addEventListener("submit", e => {
   const raw = $("#kf-nights").value.trim(), nights = raw ? raw.split(/[,;\s]+/).filter(Boolean) : [];
   if (nights.some(x => !/^\d{1,2}:\d{2}$/.test(x) || toMin(x) >= 1440)) { notice("Пробуждения пиши временем через запятую, например 23:40, 2:10."); return; }
   const norm = nights.map(x => { const m = toMin(x); return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; });
-  const next = ymd(addDays(parse(k), 1)), ops = [{ t: "kid", date: k, data: { bed: $("#kf-bed").value || null, nights: norm.length ? norm : null } }];
+  const next = ymd(addDays(parse(k), 1)), ops = [{ t: "kid", date: k, data: { bed: $("#kf-bed").value || null, nights: norm.length ? norm : null } }, { t: "me", date: k, data: { bed: $("#kf-mebed").value || null } }];
   if (next <= ymd(todayDate())) ops.push({ t: "kid", date: next, data: { wake: $("#kf-wake").value || null } }, { t: "me", date: next, data: { wake: $("#kf-me").value || null } });
   if (op(...ops)) { notice(""); toast(`Записал ночь с ${fmtShort.format(parse(k))} на ${fmtShort.format(parse(next))}`); }
 });
@@ -1807,7 +1883,7 @@ $("#kf-clear").addEventListener("click", () => {
   const k = $("#kf-date").value;
   if (!k) return;
   const next = ymd(addDays(parse(k), 1));
-  if (op({ t: "kid", date: k, data: { bed: null, nights: null, tries: null } }, { t: "kid", date: next, data: { wake: null } }, { t: "me", date: next, data: { wake: null } })) fillKidForm(k);
+  if (op({ t: "kid", date: k, data: { bed: null, nights: null, tries: null } }, { t: "me", date: k, data: { bed: null } }, { t: "kid", date: next, data: { wake: null } }, { t: "me", date: next, data: { wake: null } })) fillKidForm(k);
 });
 const setSetting = data => op({ t: "settings", data });
 $("#ks-name").addEventListener("change", e => setSetting({ kidName: e.target.value.trim() }));
@@ -2808,7 +2884,7 @@ function ritualDue() {
   if (dw >= 5 && !S.data.reviews[weekKey(t)]) return { kind: "weekly" };
   if (dw === 0 && hr < 12 && !S.data.reviews[weekKey(addDays(t, -7))]) return { kind: "weekly", last: true };
   const rd = ymd(hr < 3 ? addDays(t, -1) : t), lo = lightsOut(), now = evNow();
-  if ((hr >= 19 || hr < 3) && !S.data.rituals.evening?.[rd]) return { kind: now >= lo ? "short" : "evening", soon: now >= lo - 45, lo };
+  if ((hr >= 19 || hr < 3) && !S.data.rituals.evening?.[rd] && !S.data.me[rd]?.bed) return { kind: now >= lo ? "short" : "evening", soon: now >= lo - 45, lo };
   return null;
 }
 function renderRitualCard() {
@@ -3483,16 +3559,14 @@ function renderMetrics() {
   out.push(metric("var(--violet)", "Молитва", `цель <em>${prTarget()}</em> мин`, `${on.length}<span class="of">из 7</span>`,
     on.length ? `${plural(on.length, "день", "дня", "дней")} · по ${per} мин` : "дней пока нет", bars(pr, "var(--violet)", prTarget())));
   // отбой: во сколько закрыл день и сколько осталось на сон до своего подъёма. Сегодняшний вечер, пока не закрыт, — не пропуск
-  const evs = S.data.rituals.evening || {}, shut = k => bedMinOf(evs[k]), lo = lightsOut();
-  const nk = evs[tk] ? week : [prev[6], ...week.slice(0, 6)];
-  if (nk.some(k => shut(k) != null)) {
-    const sl = nk.map(k => { const a = shut(k), w = meWakeOf(addDaysK(k, 1)); return a != null && w != null && w + 1440 > a ? w + 1440 - a : null; });
-    const sv = sl.filter(x => x != null), ok = nk.filter(k => shut(k) != null && shut(k) <= lo + 10).length;
+  const lo = lightsOut(), nk = myNight(tk) ? week : [prev[6], ...week.slice(0, 6)], nn = nk.map(myNight);
+  if (nn.some(Boolean)) {
+    const sl = nn.map(n => n?.len ?? null), sv = sl.filter(x => x != null), ok = nn.filter(n => n && onTime(n)).length;
     const wakes = recentMe(30), need = wakes.length ? median(wakes) + 1440 - lo : null;
     out.push(metric("var(--blue)", "Отбой", `цель <em>${hm(lo)}</em>`, `${ok}<span class="of">из 7</span>`,
       `${plural(ok, "вечер", "вечера", "вечеров")} вовремя${sv.length ? ` · сон ≈ ${fmtDur(median(sv))}` : ""}`,
       bars(sl.map(x => x == null ? null : x / 60), "var(--blue)", need ? need / 60 : null),
-      `Время — когда закрыл день; сон — от него до твоего подъёма${need ? `, пунктир — ${fmtDur(need)} при отбое вовремя` : ""}.`));
+      `Сон — от «Я лёг» (или закрытия дня) до подъёма${need ? `, пунктир — ${fmtDur(need)} при отбое вовремя` : ""}.`));
   }
   // сферы: сколько из ритмичных набрали норму, и куда перекос
   const rows = balance(tk).filter(r => !r.onDemand);

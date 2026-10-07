@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Oswald:wght@400;500;600&family=PT+Serif:ital@0;1&display=swap">
-<link rel="stylesheet" href="style.css?v=48">
+<link rel="stylesheet" href="style.css?v=49">
 </head>
 <body>
 <div id="sky" aria-hidden="true"></div>
@@ -94,6 +94,11 @@
             <span><b id="me-wake-l">Я встал</b><span id="me-wake-s"></span></span>
           <span class="kgo" aria-hidden="true">Отметить</span>
           </button>
+          <button type="button" class="kbtn me" id="me-bed">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M20.5 5.5a11 11 0 1 0 6 16.2A9 9 0 0 1 20.5 5.5z" fill="var(--teal)"/></svg>
+            <span><b>Я лёг</b><span id="me-bed-s"></span></span>
+          <span class="kgo" aria-hidden="true">Отметить</span>
+          </button>
           </div>
           <div class="done-chips" id="kid-done"></div>
         </section>
@@ -164,6 +169,16 @@
           <span><i style="background:var(--k4)"></i><i style="background:var(--k2)"></i><i style="background:var(--k1)"></i>прогноз: вероятнее → реже</span>
           <span><i style="background:var(--k1)"></i>каким был прогноз в прошлые дни</span>
         </div>
+      </section>
+
+      <section class="card span2" id="my-sleep">
+        <div class="card-h"><h2>Твой сон</h2><small>14 ночей</small></div>
+        <div class="tiles four" id="ms-tiles"></div>
+        <ul class="insights" id="ms-insights"></ul>
+        <figure class="ms-fig">
+          <figcaption>Когда лёг и когда встал<small id="ms-cap"></small></figcaption>
+          <div class="chart" id="ms-chart"></div>
+        </figure>
       </section>
 
       <section class="card span2">
@@ -506,6 +521,7 @@
             <label for="kf-bed">Уснул вечером <input class="field" type="time" id="kf-bed"></label>
             <label for="kf-nights">Просыпался ненадолго <input class="field" type="text" id="kf-nights" placeholder="23:40, 2:10" inputmode="numeric"></label>
             <label for="kf-wake">Проснулся на день <input class="field" type="time" id="kf-wake"></label>
+            <label for="kf-mebed">Я лёг вечером <input class="field" type="time" id="kf-mebed"></label>
             <label for="kf-me">Я встал утром <input class="field" type="time" id="kf-me"></label>
             <button class="btn" type="submit" id="kf-save">Сохранить</button>
             <button class="btn ghost" type="button" id="kf-clear">Очистить ночь</button>
@@ -653,6 +669,6 @@
 <script src="demo-data.js?v=2"></script>
 <script src="verses.js?v=2"></script>
 <script src="compass.js?v=2"></script>
-<script src="app.js?v=60"></script>
+<script src="app.js?v=61"></script>
 </body>
 </html>

@@ -386,3 +386,36 @@ test("показатель «Отбой»: сколько вечеров зак�
   await expect(m).toContainText("1из 7");
   await expect(m).toContainText("вечер вовремя · сон ≈ 6 ч");
 });
+
+test("«Я лёг»: отбой записан, закрытие дня и книга больше не зовут", async ({ page }) => {
+  const { puts, errors } = await open(page, { time: "23:50" });
+  await expect(page.locator("#ritual-card")).toContainText("Отбой был в 23:30");
+  await expect(page.locator("#me-bed-s")).toContainText("отбой был в 23:30, 20 мин назад");
+  await page.locator("#me-bed").click();
+  await expect.poll(() => puts.at(-1)?.me?.[TODAY]?.bed).toBe("23:50");
+  await expect(page.locator("#me-bed")).toBeHidden();
+  await expect(page.locator("#ritual-card")).toBeHidden();
+  await expect(page.locator("#kid-done")).toContainText("ты лёг в 23:50");
+  expect(errors).toEqual([]);
+});
+
+test("«Твой сон»: отбой, длительность, серия и влияние сна на утро", async ({ page }) => {
+  const data = fixture();
+  data.me = {};
+  data.prayer = {};
+  // шесть ночей: три длинные (лёг вовремя) и три короткие (засиделся)
+  const nights = [["23:20", "07:00"], ["01:10", "07:00"], ["23:25", "07:10"], ["00:50", "06:50"], ["23:15", "07:00"], ["01:00", "07:05"],
+    ["23:10", "07:00"], ["00:40", "06:45"], ["23:20", "07:05"], ["01:20", "07:00"]];
+  nights.forEach(([b, w], i) => {
+    const k = day(-10 + i), next = day(-9 + i);
+    data.me[k] = { ...(data.me[k] || {}), bed: b };
+    data.me[next] = { ...(data.me[next] || {}), wake: w };
+    if (b < "12:00") data.prayer[next] = []; else data.prayer[next] = [{ s: "07:20", m: 15 }];
+  });
+  const { errors } = await open(page, { hash: "sleep", time: "10:00", data });
+  await expect(page.locator("#ms-tiles")).toContainText("5 из 10");
+  await expect(page.locator("#ms-tiles")).toContainText("0ночей подряд вовремя");
+  await expect(page.locator("#ms-insights")).toContainText("Молитва утром: после сна от 7 ч — 5 из 5, после короткого — 0 из 5.");
+  await expect(page.locator("#ms-chart svg rect[data-tip]")).toHaveCount(10);
+  expect(errors).toEqual([]);
+});

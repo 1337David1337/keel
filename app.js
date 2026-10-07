@@ -605,7 +605,8 @@ function eveningFree(k, now = evNow()) {
   const bed = bedOf(k), ub = usualBed(), eh = evHabit();
   if (bed == null && !ub) return null;
   const base = bed ?? Math.max(ub.at, now), duo = !!eh && !isDone(k, eh.id);
-  return { base, guess: bed == null, duo, at: base + (duo ? lightSleep().d + evMinutes() : 0) };
+  // вдвоём начнётся не раньше, чем сон станет крепким, и не раньше, чем сейчас
+  return { base, guess: bed == null, duo, at: duo ? Math.max(base + lightSleep().d, now) + evMinutes() : base };
 }
 function renderBookCard() {
   const card = $("#book-card"), h = S.data && readHabit();

@@ -336,6 +336,19 @@ test("книга вечером: если вдвоём ещё впереди и 
   await expect(page.locator("#book-card")).toContainText("вдвоём — до ≈ 23:30");
 });
 
+test("книга вечером: пока вдвоём не начали, окно сдвигается вместе со временем", async ({ page }) => {
+  const data = fixture();
+  data.settings.eveningHabit = "duo";
+  data.habits.push({ id: "duo", name: "Молитва и чтение с женой", sphere: "жена", target: 5, order: 4, archived: false, created: "2026-09-01" });
+  data.kid[TODAY] = { bed: "21:30" };
+  await open(page, { time: "22:00", data });
+  await expect(page.locator("#book-card")).toContainText("Окно для книги ≈ 22:30–22:45");
+  await page.clock.setFixedTime(`${TODAY}T22:40:00+03:00`);
+  await page.reload();
+  await page.locator("#main").waitFor({ state: "visible" });
+  await expect(page.locator("#book-card")).toContainText("Сегодня книга не влезет");
+});
+
 test("отбой: после него — короткое закрытие дня, хвосты уходят на завтра", async ({ page }) => {
   const data = fixture();
   data.focus[TODAY] = [{ t: "Позвонить в банк", src: "" }, { t: "Выбрать подарок", src: "", done: true }];
